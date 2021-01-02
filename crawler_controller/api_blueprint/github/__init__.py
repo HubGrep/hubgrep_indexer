@@ -4,9 +4,10 @@ from flask import request
 
 from crawler_controller.models.github import GitHubUser
 from crawler_controller.models.platforms import Platform
+from crawler_controller import db
 
-@api.route('/github/<_id>', methods=['GET', 'POST'])
-def github_usernames(_id):
+@api.route('/github', methods=['GET', 'POST'])
+def github_usernames():
     if request.method=='GET':
         """ return a block of usernames to crawl repos for"""
 
@@ -16,15 +17,21 @@ def github_usernames(_id):
 
         {
             'platform_base_url': 'https://api.github.com/',
+            'platform_type': 'github',
             'results': [...]
         }
         """
         platform_base_url = request.json['platform_base_url']
         platform_type = request.json['platform_type']
-        platform = Platform.query(platform_type=platform_type, base_url=platform_base_url)
+        platform_state = request.json['state']
+
+        platform = Platform.query.filter_by(platform_type=platform_type, base_url=platform_base_url).first()
+        platform.update_state(platform_state)
+
         for result in request.json['results']:
             gh_user = GitHubUser.from_gh_result(platform, result)
-            print(gh_user)
+            db.session.add(gh_user)
+        db.session.commit()
 
     return ''
 

@@ -37,3 +37,12 @@ def del_platform(platform_type, base_url):
         db.session.commit()
     else:
         print(f'{platform_type} / {base_url} not found')
+
+
+@cli_bp.cli.command()
+def stats():
+    from crawler_controller.models.github import GitHubUser
+
+    github_user_count = GitHubUser.query.count()
+    print(github_user_count)
+

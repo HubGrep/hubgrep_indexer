@@ -2,7 +2,7 @@ from crawler_controller import db
 
 
 
-class GitHubUser():
+class GitHubUser(db.Model):
     """
     {
     "login": "errfree",
@@ -27,26 +27,30 @@ class GitHubUser():
     """
     __tablename__ = 'github_users'
     id = db.Column(db.Integer, primary_key=True)
-    platform = db.Column(db.ForeignKey('Platform'), nullable=False)
+    platform = db.Column(db.ForeignKey('platforms.id'), nullable=False)
 
     gh_login = db.Column(db.String(128))
     gh_id = db.Column(db.Integer())
-    gh_node_id = db.Column(db.String(24))
+    gh_node_id = db.Column(db.String(32))
     gh_type = db.Column(db.String(12))
     gh_site_admin = db.Column(db.Boolean())
 
     @staticmethod
     def from_gh_result(platform, result: dict) -> 'GitHubUser':
-        gh_user = GitHubUser()
+        gh_user = GitHubUser.query.filter_by(platform=platform.id, gh_id=result['id']).first()
+        if not gh_user:
+            gh_user = GitHubUser()
+        gh_user.platform = platform.id
         gh_user.gh_id = result['id']
         gh_user.gh_login = result['login']
         gh_user.gh_node_id = result['node_id']
         gh_user.gh_type = result['type']
         gh_user.gh_site_admin = result['site_admin']
         return gh_user
+    
 
     def __repr__(self):
-        return f''
+        return f'{self.gh_login} @ {self.platform}'
 
 
 
