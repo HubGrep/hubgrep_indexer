@@ -2,13 +2,9 @@ version: "2"
 
 services:
 
-  #postgres:
-  #  image: postgres:9.5
-  #  env_file: .env
-  #  ports:
-  #    - ${POSTGRES_PORT}:${POSTGRES_PORT}
-  #  volumes:
-  #    - pgdata:/var/lib/postgresql/data
+  postgres:
+    image: postgres:13
+    env_file: .env
 
   service:
     build: .

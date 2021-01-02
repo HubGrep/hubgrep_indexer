@@ -31,17 +31,19 @@ def create_app():
     migrate.init_app(app, db=db)
 
 
-    from crawler_controller.models.github import GitHubPlatform, GitHubUser, GithubRepo
-    from crawler_controller.models.user import Role, User, Crawler
+    from crawler_controller.models.github import GitHubUser, GithubRepo
+    from crawler_controller.models.user import Role, User
 
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore)
 
-    #from .cli import *
     from crawler_controller.api_blueprint import api
     from crawler_controller.frontend_blueprint import frontend
+    from crawler_controller.cli_blueprint import cli_bp
     app.register_blueprint(api)
     app.register_blueprint(frontend)
+    app.register_blueprint(cli_bp)
+
 
     return app
 

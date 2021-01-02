@@ -1,3 +1,5 @@
+import os
+
 class Config():
     DEBUG = False
     TESTING = False
@@ -6,10 +8,11 @@ class Config():
 
 
 class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
+    SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
 
 
 class DevelopmentConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
     DEBUG = True
 
 

@@ -1,9 +1,5 @@
 from crawler_controller import db
 
-class GitHubPlatform(db.Model):
-    __tablename__ = 'github_platforms'
-    id = db.Column(db.Integer, primary_key=True)
-    base_url = db.Column(db.String(128))
 
 
 class GitHubUser():
@@ -31,7 +27,7 @@ class GitHubUser():
     """
     __tablename__ = 'github_users'
     id = db.Column(db.Integer, primary_key=True)
-    platform = db.Column(db.ForeignKey('GitHubPlatforms'))
+    platform = db.Column(db.ForeignKey('Platform'), nullable=False)
 
     gh_login = db.Column(db.String(128))
     gh_id = db.Column(db.Integer())
@@ -40,7 +36,7 @@ class GitHubUser():
     gh_site_admin = db.Column(db.Boolean())
 
     @staticmethod
-    def from_gh_result(result: dict) -> 'GitHubUser':
+    def from_gh_result(platform, result: dict) -> 'GitHubUser':
         gh_user = GitHubUser()
         gh_user.gh_id = result['id']
         gh_user.gh_login = result['login']
@@ -48,6 +44,9 @@ class GitHubUser():
         gh_user.gh_type = result['type']
         gh_user.gh_site_admin = result['site_admin']
         return gh_user
+
+    def __repr__(self):
+        return f''
 
 
 

@@ -13,9 +13,3 @@ class User(db.Model, fsqla.FsUserMixin):
 
 
 
-class Crawler(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.ForeignKey('User'))
-
-
-
