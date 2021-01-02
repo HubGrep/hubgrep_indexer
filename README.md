@@ -1,59 +1,43 @@
-# crawler_api
+# crawler_controller
+
+WIP
 
 
-## Requirements
-
-- docker
-- docker-compose
- 
-### setup in intellij
-
-for setup in intellij i recommend to have a separate virtualenv, since its not fun to make intellij work with the environment of the docker container.
-
-this would be something like
-`virtuelenv -p python3.6 env_local`
-
-then activate it with
-`source env_local/bin/activate` (on bash)
-`. env_local/bin/activate` (on fish)
-
-in intellij you can point the interpreter to `env_local/bin/python`
+backend for various crawlers
 
 
-## getting a shell
- 
-    `docker-compose run --rm service /bin/bash`
- 
-on first start you should install your requirements (which is at least zappa and flask) and save it to requirements.txt
+## dev setup
 
-`pip install zappa flask`
-`pip freeze > requirements.txt`
+create a config by copying `.env.dist` to `.env`, and add the missing values.
 
- 
-## starting the service for local dev
+then start the service and database
 
-when you have a requirements file, you can start the service for localdev
-
-    `docker-compose up`
- 
- 
-## testing
-
-`python -m unittest`
-
-or use pytest and just run
-
-`pytest`
+    docker-compose up
 
 
-## deploying
+and maybe you want to have a container to run cli commands:
 
-### first deployment
+    docker-compose run --rm service /bin/bash
 
-on first deploy of the stage, you have to run
-`zappa deploy <stage>` (where stage is `dev` or `prod`)
+in the container you have to run the db migrations
 
-to update the lambda
+    # to create the migration files
+    flask db migrate
 
-    `zappa update <stage>`
-        
+    # to run the actual upgrade
+    flask db upgrade
+
+
+you can add platforms like so:
+
+    flask cli add-platform github 'https://api.github.com/'
+    flask cli del-platform github 'https://api.github.com/'
+
+
+afterwards, set up your crawlers for the added platforms (see crawler repos)
+
+
+
+
+
+
