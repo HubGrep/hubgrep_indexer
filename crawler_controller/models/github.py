@@ -1,7 +1,6 @@
 from crawler_controller import db
 
 
-
 class GitHubUser(db.Model):
     """
     {
@@ -47,10 +46,11 @@ class GitHubUser(db.Model):
         gh_user.gh_type = result['type']
         gh_user.gh_site_admin = result['site_admin']
         return gh_user
-    
 
     def __repr__(self):
         return f'{self.gh_login} @ {self.platform}'
+
+github_user_index = db.Index('github_user_idx', GitHubUser.platform, GitHubUser.gh_id)
 
 
 

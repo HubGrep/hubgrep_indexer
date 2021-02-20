@@ -13,6 +13,10 @@ migrate = Migrate()
 logger = logging.getLogger(__name__)
 
 
+# fix keep-alive in dev server (dropped connections from client sessions)
+from werkzeug.serving import WSGIRequestHandler
+WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
 def create_app():
     app = Flask(__name__)
 
