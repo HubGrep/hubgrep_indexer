@@ -1,0 +1,49 @@
+import os
+from flask import Flask
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+
+from hubgrep_indexer.lib.init_logging import init_logging
+
+import logging
+
+db = SQLAlchemy()
+
+migrate = Migrate()
+logger = logging.getLogger(__name__)
+
+# fix keep-alive in dev server (dropped connections from client sessions)
+from werkzeug.serving import WSGIRequestHandler
+WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
+def create_app():
+    app = Flask(__name__)
+
+    app_env = os.environ.get('APP_ENV', 'development')
+    config_mapping = {
+        'development': 'hubgrep_indexer.lib.config.DevelopmentConfig',
+        'production': 'hubgrep_indexer.lib.config.ProductionConfig',
+        'testing': 'hubgrep_indexer.lib.config.testingConfig',
+    }
+
+    app.config.from_object(config_mapping[app_env])
+
+    init_logging(loglevel=app.config['LOGLEVEL'])
+
+    db.init_app(app)
+    migrate.init_app(app, db=db)
+
+    from hubgrep_indexer.models.github import GitHubUser, GithubRepo
+
+    from hubgrep_indexer.api_blueprint import api
+    from hubgrep_indexer.frontend_blueprint import frontend
+    from hubgrep_indexer.cli_blueprint import cli_bp
+
+    app.register_blueprint(api)
+    app.register_blueprint(frontend)
+    app.register_blueprint(cli_bp)
+    return app
+
+
+
+

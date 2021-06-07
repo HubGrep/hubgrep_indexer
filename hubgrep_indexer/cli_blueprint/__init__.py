@@ -4,8 +4,8 @@ from flask import current_app as app, request
 
 cli_bp = Blueprint("cli", __name__)
 
-from crawler_controller.models.platforms import Platform
-from crawler_controller import db
+from hubgrep_indexer.models.platforms import Platform
+from hubgrep_indexer import db
 
 @cli_bp.cli.command()
 def init_db():
@@ -41,7 +41,7 @@ def del_platform(platform_type, base_url):
 
 @cli_bp.cli.command()
 def stats():
-    from crawler_controller.models.github import GitHubUser
+    from hubgrep_indexer.models.github import GitHubUser
 
     github_user_count = GitHubUser.query.count()
     print(github_user_count)
