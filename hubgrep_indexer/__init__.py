@@ -23,7 +23,7 @@ def create_app():
     config_mapping = {
         'development': 'hubgrep_indexer.lib.config.DevelopmentConfig',
         'production': 'hubgrep_indexer.lib.config.ProductionConfig',
-        'testing': 'hubgrep_indexer.lib.config.testingConfig',
+        'testing': 'hubgrep_indexer.lib.config.TestingConfig',
     }
 
     app.config.from_object(config_mapping[app_env])
@@ -33,7 +33,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db=db)
 
-    from hubgrep_indexer.models.github import GitHubUser, GithubRepo
+    from hubgrep_indexer.models.github import GithubRepository
 
     from hubgrep_indexer.api_blueprint import api
     from hubgrep_indexer.frontend_blueprint import frontend

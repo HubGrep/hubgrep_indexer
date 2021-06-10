@@ -8,11 +8,10 @@ class Config():
 
 
 class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
+    pass
 
 
 class DevelopmentConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ['SQLALCHEMY_DATABASE_URI']
     DEBUG = True
 
 

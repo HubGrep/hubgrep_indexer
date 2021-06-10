@@ -9,9 +9,6 @@ logger = logging.getLogger(__name__)
 class HostingService(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    user = db.relationship("User", backref=db.backref("hosting_services", lazy=True))
-
     type = db.Column(db.String(80), nullable=False)
 
     # main instance website
