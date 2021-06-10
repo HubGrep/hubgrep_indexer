@@ -6,6 +6,11 @@ services:
     image: postgres:13
     env_file: .env
 
+  redis:
+    image: redis
+    ports: 
+      - 6379:6379
+
   service:
     build: .
     volumes:
