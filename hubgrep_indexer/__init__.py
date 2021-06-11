@@ -4,17 +4,21 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 from hubgrep_indexer.lib.init_logging import init_logging
+from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
+import redis
 import logging
 
 db = SQLAlchemy()
 
 migrate = Migrate()
+state_manager = RedisStateManager()
 logger = logging.getLogger(__name__)
 
 # fix keep-alive in dev server (dropped connections from client sessions)
 from werkzeug.serving import WSGIRequestHandler
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
 
 def create_app():
     app = Flask(__name__)
@@ -27,6 +31,9 @@ def create_app():
     }
 
     app.config.from_object(config_mapping[app_env])
+
+    # todo: make init_app function?
+    state_manager.redis = redis.from_url(app.config['REDIS_URL'])
 
     init_logging(loglevel=app.config['LOGLEVEL'])
 

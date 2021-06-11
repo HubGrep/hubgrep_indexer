@@ -59,59 +59,64 @@ class Block:
         d = self.to_dict()
         return json.dumps(d)
 
+    def __repr__(self):
+        return f"<Block {self.uid}: {self.from_id}-{self.to_id}>"
 
 class StateManager:
     """
     base class for state managers
     """
 
-    def __init__(self):
-        self.batch_size = 1000  # block size for a crawler
-        self.block_timeout = 1000  # seconds
+    def __init__(self, batch_size=1000, block_timeout=1000):
+        self.batch_size = batch_size  # block size for a crawler
+        self.block_timeout = block_timeout  # seconds
 
-    def get_current_highest_repo_id(self) -> int:
+    def get_current_highest_repo_id(self, hoster_prefix: str) -> int:
         raise NotImplementedError
 
-    def push_new_block(self, block: Block) -> None:
+    def push_new_block(self, hoster_prefix: str, block: Block) -> None:
         raise NotImplementedError
 
-    def delete_block(self, block_uid: str) -> Block:
+    def delete_block(self, hoster_prefix: str, block_uid: str) -> Block:
         """
         deletes from state and returns block with block_id
         """
         raise NotImplementedError
 
-    def get_blocks(self) -> Dict[str, Block]:
+    def get_blocks(self, hoster_prefix: str) -> Dict[str, Block]:
         raise NotImplementedError
 
-    def set_current_highest_repo_id(self, highest_repo_id):
+    def set_current_highest_repo_id(self, hoster_prefix: str, highest_repo_id):
         raise NotImplementedError
 
-    def finish_block(self, block_uid: str):
-        return self.delete_block(block_uid)
+    def finish_block(self, hoster_prefix: str, block_uid: str):
+        return self.delete_block(hoster_prefix, block_uid)
 
-    def reset(self):
+    def reset(self, hoster_prefix: str):
         """
         reset state manager
         """
-        self.set_current_highest_repo_id(0)
-        for block in list(self.get_blocks().values())[:]:
-            self.delete_block(block_uid=block.uid)
+        print("reseting")
+        self.set_current_highest_repo_id(hoster_prefix, 0)
+        print(list(self.get_blocks(hoster_prefix).values())[:])
+        for block in list(self.get_blocks(hoster_prefix).values())[:]:
+            print("deleting", block)
+            self.delete_block(hoster_prefix, block_uid=block.uid)
 
-    def get_next_block(self):
+    def get_next_block(self, hoster_prefix: str) -> Block:
         """
         return the next new block
         """
-        current_highest_repo_id = self.get_current_highest_repo_id()
+        current_highest_repo_id = self.get_current_highest_repo_id(hoster_prefix)
         from_id = current_highest_repo_id + 1
         to_id = current_highest_repo_id + self.batch_size
 
         block = Block.new(from_id=from_id, to_id=to_id)
-        self.push_new_block(block)
-        self.set_current_highest_repo_id(block.to_id)
+        self.push_new_block(hoster_prefix, block)
+        self.set_current_highest_repo_id(hoster_prefix, block.to_id)
         return block
 
-    def get_timed_out_block(self, timestamp_now=None):
+    def get_timed_out_block(self, hoster_prefix: str, timestamp_now=None) -> Block:
         """
         try to get a block we didnt receive an answer for
 
@@ -121,12 +126,11 @@ class StateManager:
         if not timestamp_now:
             timestamp_now = time.time()
 
-        for uid, block in self.get_blocks().items():
+        for uid, block in self.get_blocks(hoster_prefix).items():
             age = timestamp_now - block.attempts_at[-1]
             if age > self.block_timeout:
                 return block
         return None
-
 
 class LocalStateManager(StateManager):
     """
@@ -139,22 +143,31 @@ class LocalStateManager(StateManager):
     def __init__(self):
         super().__init__()
 
-        # {uuid: block}
-        self.blocks: Dict[str, Block] = {}
-        self.current_highest_repo_id = 0  # new blocks start here
+        #  
+        # blocks: {"hoster_prefix": {"uuid": block}
+        # current_highest_repo_ids = {"hoster_prefix" : {current_highest_repo_id": 0}
+        self.blocks: Dict[str, Dict[str, Block]] = {}
+        self.current_highest_repo_ids = {}
 
-    def push_new_block(self, block: Block) -> None:
-        self.blocks[block.uid] = block
+    def push_new_block(self, hoster_prefix, block: Block) -> None:
+        if not self.blocks.get(hoster_prefix, False):
+            self.blocks[hoster_prefix] = {}
+        self.blocks[hoster_prefix][block.uid] = block
 
-    def get_blocks(self) -> Dict[str, Block]:
-        return self.blocks
+    def get_blocks(self, hoster_prefix) -> Dict[str, Block]:
+        return self.blocks.get(hoster_prefix, {})
 
-    def set_current_highest_repo_id(self, highest_repo_id) -> None:
-        self.current_highest_repo_id = highest_repo_id
+    def set_current_highest_repo_id(self, hoster_prefix, highest_repo_id) -> None:
+        self.current_highest_repo_ids[hoster_prefix] = highest_repo_id
 
-    def delete_block(self, block_uid: str) -> Block:
-        return self.blocks.pop(block_uid)
+    def delete_block(self, hoster_prefix, block_uid: str) -> Block:
+        hoster_blocks = self.blocks[hoster_prefix]
+        print(len(hoster_blocks))
+        block = hoster_blocks.pop(block_uid)
+        print(len(hoster_blocks))
+        return block
 
-    def get_current_highest_repo_id(self) -> int:
-        return self.current_highest_repo_id
-
+    def get_current_highest_repo_id(self, hoster_prefix) -> int:
+        if not self.current_highest_repo_ids.get(hoster_prefix, False):
+            self.current_highest_repo_ids[hoster_prefix] = 0
+        return self.current_highest_repo_ids[hoster_prefix]

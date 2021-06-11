@@ -4,6 +4,7 @@ class Config():
     DEBUG = False
     TESTING = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    REDIS_URL = 'redis://localhost'
     LOGLEVEL = 'debug'
 
 
@@ -17,3 +18,4 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    REDIS_URL = 'redis://localhost'

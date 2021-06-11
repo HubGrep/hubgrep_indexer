@@ -19,22 +19,34 @@ class RedisStateManager(StateManager):
             self.set_current_highest_repo_id(0)
 
 
-    def set_current_highest_repo_id(self, highest_repo_id):
-        self.redis.set(self.highest_repo_id_key, highest_repo_id)
+    def set_current_highest_repo_id(self, hoster_prefix, highest_repo_id):
+        redis_key = f"{hoster_prefix}:{self.highest_repo_id_key}"
+        self.redis.set(redis_key, highest_repo_id)
 
-    def get_current_highest_repo_id(self):
-        return int(self.redis.get(self.highest_repo_id_key)) or 0
+    def get_current_highest_repo_id(self, hoster_prefix):
+        redis_key = f"{hoster_prefix}:{self.highest_repo_id_key}"
+        highest_repo_id_str: str = self.redis.get(redis_key)
+        if not highest_repo_id_str:
+            highest_repo_id = 0
+        else:
+            highest_repo_id = int(highest_repo_id_str)
+        return highest_repo_id
 
-    def push_new_block(self, block: Block):
-        self.redis.hset(self.block_map_key, block.uid, block.to_dict())
+    def push_new_block(self, hoster_prefix, block: Block):
+        redis_key = f"{hoster_prefix}:{self.block_map_key}"
+        self.redis.hset(redis_key, block.uid, block.to_dict())
 
-    def delete_block(self, block_uid):
-        block = self.redis.hget(self.block_map_key, block_uid)
-        self.redis.hdel(self.block_map_key, block_uid)
+    def delete_block(self, hoster_prefix, block_uid):
+        redis_key = f"{hoster_prefix}:{self.block_map_key}"
+        print('deleting', redis_key, block_uid)
+        block = self.redis.hget(redis_key, block_uid)
+        print(block)
+        self.redis.hdel(redis_key, block_uid)
         return block
 
-    def get_blocks(self):
-        block_jsons = self.redis.hgetall(self.block_map_key)
+    def get_blocks(self, hoster_prefix):
+        redis_key = f"{hoster_prefix}:{self.block_map_key}"
+        block_jsons = self.redis.hgetall(redis_key)
         blocks = {}
         for block_json in block_jsons.values():
             block = Block.from_json(block_json)
