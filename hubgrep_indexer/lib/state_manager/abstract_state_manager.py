@@ -15,7 +15,7 @@ class Block:
     # todo: add "ids" for ranges we already know, instead of from/to_id
     #
     def __init__(self):
-        self.uid = uuid.uuid4()
+        self.uid = uuid.uuid4().hex
         self.from_id = None
         self.to_id = None
         self.attempts_at = []
@@ -37,6 +37,7 @@ class Block:
         block.to_id = d["to_id"]
         block.attempts_at = d["attempts_at"]
         block.status = d["status"]
+        return block
 
     @classmethod
     def from_json(cls, j: str):
@@ -89,7 +90,18 @@ class StateManager:
     def finish_block(self, block_uid: str):
         return self.delete_block(block_uid)
 
+    def reset(self):
+        """
+        reset state manager
+        """
+        self.set_current_highest_repo_id(0)
+        for block in list(self.get_blocks().values())[:]:
+            self.delete_block(block_uid=block.uid)
+
     def get_next_block(self):
+        """
+        return the next new block
+        """
         current_highest_repo_id = self.get_current_highest_repo_id()
         from_id = current_highest_repo_id + 1
         to_id = current_highest_repo_id + self.batch_size
@@ -118,7 +130,8 @@ class StateManager:
 
 class LocalStateManager(StateManager):
     """
-    local state manager
+    dummy state manager,
+    mostly to run tests for the StateManager code without much overhead
 
     stored in memory, at runtime
     """

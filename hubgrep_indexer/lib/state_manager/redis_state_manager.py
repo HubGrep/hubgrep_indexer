@@ -1,6 +1,7 @@
-from .abstract_state_manager import StateManager
+from .abstract_state_manager import StateManager, Block
 
 import redis
+
 
 class RedisStateManager(StateManager):
     """
@@ -9,16 +10,20 @@ class RedisStateManager(StateManager):
 
     def __init__(self):
         super().__init__()
-        self.redis = redis.client()
+        self.redis = redis.from_url("redis://localhost")
 
         self.block_map_key = "blocks"
         self.highest_repo_id_key = "highest_repo_id"
+
+        if not self.redis.get(self.highest_repo_id_key):
+            self.set_current_highest_repo_id(0)
+
 
     def set_current_highest_repo_id(self, highest_repo_id):
         self.redis.set(self.highest_repo_id_key, highest_repo_id)
 
     def get_current_highest_repo_id(self):
-        return self.redis.get(self.highest_repo_id_key) or 0
+        return int(self.redis.get(self.highest_repo_id_key)) or 0
 
     def push_new_block(self, block: Block):
         self.redis.hset(self.block_map_key, block.uid, block.to_dict())
@@ -31,7 +36,7 @@ class RedisStateManager(StateManager):
     def get_blocks(self):
         block_jsons = self.redis.hgetall(self.block_map_key)
         blocks = {}
-        for block_json in block_jsons:
+        for block_json in block_jsons.values():
             block = Block.from_json(block_json)
             blocks[block.uid] = block
         return blocks
