@@ -34,9 +34,7 @@ class RedisStateManager(StateManager):
 
     def delete_block(self, hoster_prefix, block_uid):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"
-        print('deleting', redis_key, block_uid)
         block = self.redis.hget(redis_key, block_uid)
-        print(block)
         self.redis.hdel(redis_key, block_uid)
         return block
 

@@ -15,7 +15,7 @@ def test_app_with_hoster(test_app, request):
         db.session.add(hosting_service)
         db.session.commit()
 
-        redis_prefix = f"{hosting_service.type}:{hosting_service.id}"
+        redis_prefix = hosting_service.id
     yield test_app
     def teardown():
         state_manager.reset(redis_prefix)
@@ -26,13 +26,12 @@ class TestGithub:
     def test_get_block(self, test_app_with_hoster):
         with test_app_with_hoster.app_context() as app:
             response = test_app_with_hoster.test_client().get(
-                "/api/v1/types/github/1/block"
+                "/api/v1/hosters/1/block"
             )
             assert response.json["from_id"] == 1
             assert response.json["to_id"] == state_manager.batch_size
             response = test_app_with_hoster.test_client().get(
-                "/api/v1/types/github/1/block"
+                "/api/v1/hosters/1/block"
             )
             assert response.json["from_id"] == state_manager.batch_size +1
             assert response.json["to_id"] == state_manager.batch_size * 2
-            assert False

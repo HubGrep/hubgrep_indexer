@@ -95,9 +95,7 @@ class StateManager:
         """
         reset state manager
         """
-        print("reseting")
         self.set_current_highest_repo_id(hoster_prefix, 0)
-        print(list(self.get_blocks(hoster_prefix).values())[:])
         for block in list(self.get_blocks(hoster_prefix).values())[:]:
             print("deleting", block)
             self.delete_block(hoster_prefix, block_uid=block.uid)
@@ -134,7 +132,7 @@ class StateManager:
 
 class LocalStateManager(StateManager):
     """
-    dummy state manager,
+    local state manager, using plain dicts for storage
     mostly to run tests for the StateManager code without much overhead
 
     stored in memory, at runtime
@@ -162,9 +160,7 @@ class LocalStateManager(StateManager):
 
     def delete_block(self, hoster_prefix, block_uid: str) -> Block:
         hoster_blocks = self.blocks[hoster_prefix]
-        print(len(hoster_blocks))
         block = hoster_blocks.pop(block_uid)
-        print(len(hoster_blocks))
         return block
 
     def get_current_highest_repo_id(self, hoster_prefix) -> int:

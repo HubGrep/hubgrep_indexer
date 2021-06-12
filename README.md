@@ -5,8 +5,8 @@ WIP
 
 backend for various crawlers
 
+## setup
 
-## dev setup
 
 create a config by copying `.env.dist` to `.env`, and add the missing values.
 
@@ -14,6 +14,12 @@ then start the service and database
 
     docker-compose up
 
+run the initial migration in the container:
+
+    docker-compose run --rm service /bin/bash
+    flask cli init
+
+## dev setup
 
 and maybe you want to have a container to run cli commands:
 
@@ -28,10 +34,6 @@ in the container you have to run the db migrations
     flask db upgrade
 
 
-you can add platforms like so:
-
-    flask cli add-platform github 'https://api.github.com/'
-    flask cli del-platform github 'https://api.github.com/'
 
 
 afterwards, set up your crawlers for the added platforms (see crawler repos)
