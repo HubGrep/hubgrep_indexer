@@ -41,6 +41,7 @@ def create_app():
     migrate.init_app(app, db=db)
 
     from hubgrep_indexer.models.github import GithubRepository
+    from hubgrep_indexer.models.hosting_service import HostingService
 
     from hubgrep_indexer.api_blueprint import api
     from hubgrep_indexer.frontend_blueprint import frontend
