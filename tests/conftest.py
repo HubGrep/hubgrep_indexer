@@ -7,9 +7,8 @@ import pytest
 
 from hubgrep_indexer import create_app, db
 
-print('conftest!!!')
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def test_app():
     app = create_app()
     db_fd, file_path = tempfile.mkstemp()
@@ -19,10 +18,14 @@ def test_app():
         db.create_all()
     yield app
 
+    # tear down db after test
     os.close(db_fd)
     os.unlink(file_path)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def test_client(test_app):
+    ctx = test_app.test_request_context()
+    ctx.push()
     yield test_app.test_client()
+    ctx.pop()

@@ -23,11 +23,10 @@ WSGIRequestHandler.protocol_version = "HTTP/1.1"
 def create_app():
     app = Flask(__name__)
 
-    app_env = os.environ.get('APP_ENV', 'development')
+    app_env = os.environ.get('APP_ENV', 'dotenv')
     config_mapping = {
-        'development': 'hubgrep_indexer.lib.config.DevelopmentConfig',
-        'production': 'hubgrep_indexer.lib.config.ProductionConfig',
-        'testing': 'hubgrep_indexer.lib.config.TestingConfig',
+        'testing': 'hubgrep_indexer.config.testing_config.TestingConfig',
+        'dotenv': 'hubgrep_indexer.config.dotenv.DotEnvConfig',
     }
 
     app.config.from_object(config_mapping[app_env])

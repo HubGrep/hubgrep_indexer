@@ -15,10 +15,6 @@ class RedisStateManager(StateManager):
         self.block_map_key = "blocks"
         self.highest_repo_id_key = "highest_repo_id"
 
-        if not self.redis.get(self.highest_repo_id_key):
-            self.set_current_highest_repo_id(0)
-
-
     def set_current_highest_repo_id(self, hoster_prefix, highest_repo_id):
         redis_key = f"{hoster_prefix}:{self.highest_repo_id_key}"
         self.redis.set(redis_key, highest_repo_id)
