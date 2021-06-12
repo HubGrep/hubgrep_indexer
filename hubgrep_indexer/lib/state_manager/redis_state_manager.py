@@ -30,7 +30,7 @@ class RedisStateManager(StateManager):
 
     def push_new_block(self, hoster_prefix, block: Block):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"
-        self.redis.hset(redis_key, block.uid, block.to_dict())
+        self.redis.hset(redis_key, block.uid, block.to_json())
 
     def delete_block(self, hoster_prefix, block_uid):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"

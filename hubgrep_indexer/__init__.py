@@ -25,9 +25,11 @@ def create_app():
 
     app_env = os.environ.get('APP_ENV', 'dotenv')
     config_mapping = {
-        'testing': 'hubgrep_indexer.config.testing_config.TestingConfig',
+        'testing': 'hubgrep_indexer.config.testing.TestingConfig',
         'dotenv': 'hubgrep_indexer.config.dotenv.DotEnvConfig',
     }
+
+    print(f"starting in {app_env} config")
 
     app.config.from_object(config_mapping[app_env])
 

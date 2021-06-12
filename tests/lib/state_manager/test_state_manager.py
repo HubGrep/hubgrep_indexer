@@ -1,9 +1,11 @@
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import LocalStateManager
-from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
-import pytest
+import logging
 import time
 
-import logging
+import redis
+import pytest
+
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import LocalStateManager
+from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
 
 hoster = "hoster_1"
@@ -54,7 +56,8 @@ class TestLocalStateManager:
 
 class TestRedisStateManager(TestLocalStateManager):
     @pytest.fixture()
-    def state_manager(self):
+    def state_manager(self, test_app):
         manager = RedisStateManager()
+        manager.redis = redis.from_url(test_app.config['REDIS_URL'])
         yield manager
         manager.reset(hoster)

@@ -1,8 +1,6 @@
 from hubgrep_indexer.api_blueprint import api
-from flask import request
+from flask import request, jsonify
 
-from hubgrep_indexer.models.github import GitHubUser
-from hubgrep_indexer.models.platforms import Platform
 from hubgrep_indexer import db, state_manager
 
 
@@ -27,13 +25,15 @@ def github_state(hosting_service_id: int):
     )
 
 
-@api.route("/types/github/<hosting_service_id/block>")
+@api.route("/types/github/<hosting_service_id>/block")
 def get_github_block(hosting_service_id: int):
-    timed_out_block = state_manager.get_timed_out_block()
+    timed_out_block = state_manager.get_timed_out_block(f"github:{hosting_service_id}")
+    print("timed out", timed_out_block)
     if timed_out_block:
-        return timed_out_block.to_json()
-    next_block = state_manager.get_next_block()
-    return next_block.to_json()
+        return jsonify(timed_out_block.to_dict())
+    next_block = state_manager.get_next_block(f"github:{hosting_service_id}")
+    print("next", next_block)
+    return jsonify(next_block.to_dict())
 
     """
     return dict(

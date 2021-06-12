@@ -45,14 +45,12 @@ class Block:
         return cls.from_dict(d)
 
     def to_dict(self):
-        return json.dumps(
-            dict(
-                uid=self.uid,
-                from_id=self.from_id,
-                to_id=self.to_id,
-                attempts_at=self.attempts_at,
-                status=self.status,
-            )
+        return dict(
+            uid=self.uid,
+            from_id=self.from_id,
+            to_id=self.to_id,
+            attempts_at=self.attempts_at,
+            status=self.status,
         )
 
     def to_json(self):
@@ -61,6 +59,7 @@ class Block:
 
     def __repr__(self):
         return f"<Block {self.uid}: {self.from_id}-{self.to_id}>"
+
 
 class StateManager:
     """
@@ -132,6 +131,7 @@ class StateManager:
                 return block
         return None
 
+
 class LocalStateManager(StateManager):
     """
     dummy state manager,
@@ -143,7 +143,7 @@ class LocalStateManager(StateManager):
     def __init__(self):
         super().__init__()
 
-        #  
+        #
         # blocks: {"hoster_prefix": {"uuid": block}
         # current_highest_repo_ids = {"hoster_prefix" : {current_highest_repo_id": 0}
         self.blocks: Dict[str, Dict[str, Block]] = {}
