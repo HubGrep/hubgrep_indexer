@@ -1,9 +1,13 @@
 import click
 from flask import Blueprint, render_template
-from flask import current_app as app, request
+from flask import current_app as app
+from flask import request
+from flask import url_for
 from flask import jsonify
 
 from hubgrep_indexer.models.hosting_service import HostingService
+from hubgrep_indexer.models.repositories.github import GithubRepository
+from hubgrep_indexer.models.repositories.gitea import GiteaRepository
 from hubgrep_indexer import db, state_manager
 
 from hubgrep_indexer.api_blueprint import api
@@ -14,7 +18,7 @@ def hosters():
     if request.method == "GET":
         hosting_services = []
         for hosting_service in HostingService.query.all():
-            hosting_services.append(hosting_service.to_dict(include_secrets=True))
+            hosting_services.append(hosting_service.crawler_dict())
         return jsonify(hosting_services)
 
     elif request.method == "POST":
@@ -30,7 +34,7 @@ def hosters():
         hosting_service = HostingService.from_dict(request.json)
         db.session.add(hosting_service)
         db.session.commit()
-        return jsonify(hosting_service.to_dict(include_secrets=True))
+        return jsonify(hosting_service.crawler_dict())
 
     [
         {
@@ -48,9 +52,12 @@ def hosters():
     ]
 
 
-
 @api.route("/hosters/<hosting_service_id>/state")
 def state(hosting_service_id: int):
+    blocks = state_manager.get_blocks(hosting_service_id)
+    block_dicts = [block.as_dict for block in blocks.items()]
+    return jsonify(block_dicts)
+    """
     return dict(
         current_round=dict(start_timestamp=1234567),
         blocks=[
@@ -68,16 +75,19 @@ def state(hosting_service_id: int):
             ),
         ],
     )
+    """
 
-# /hosters/<id>  ?
+
 @api.route("/hosters/<hosting_service_id>/block")
 def get_block(hosting_service_id: int):
     timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
     if timed_out_block:
-        return jsonify(timed_out_block.to_dict())
-
-    next_block = state_manager.get_next_block(hosting_service_id)
-    return jsonify(next_block.to_dict())
+        block = timed_out_block
+    else:
+        block = state_manager.get_next_block(hosting_service_id)
+    block_dict = block.to_dict()
+    block_dict["callback_url"] = url_for("api.add_repos", hosting_service_id=hosting_service_id)
+    return jsonify(block_dict)
 
     """
     return dict(
@@ -101,4 +111,20 @@ def get_block(hosting_service_id: int):
 
 @api.route("/hosters/<hosting_service_id>/", methods=["post"])
 def add_repos(hosting_service_id: int):
-    return None
+    hosting_service: HostingService = HostingService.query.get(hosting_service_id)
+    repos_dict = request.json
+    # get repo class
+    if hosting_service.type == "github":
+        RepoClass = GithubRepository
+    elif hosting_service.type == "gitea":
+        RepoClass = GiteaRepository
+    else:
+        return jsonify(status="error"), 500
+
+    # add repos to the db :)
+    for repo_dict in repos_dict:
+        r = RepoClass.from_dict(hosting_service_id, repo_dict)
+        db.session.add(r)
+    db.session.commit()
+
+    return jsonify(dict(status="ok")), 200

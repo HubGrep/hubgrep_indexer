@@ -7,3 +7,4 @@ htmlcov/
 .coverage
 *.egg-info/
 .env
+hosters.json
