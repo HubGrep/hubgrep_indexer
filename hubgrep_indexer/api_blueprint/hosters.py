@@ -86,7 +86,7 @@ def get_block(hosting_service_id: int):
     else:
         block = state_manager.get_next_block(hosting_service_id)
     block_dict = block.to_dict()
-    block_dict["callback_url"] = url_for("api.add_repos", hosting_service_id=hosting_service_id)
+    block_dict["callback_url"] = url_for("api.add_repos", hosting_service_id=hosting_service_id, _external=True)
     return jsonify(block_dict)
 
     """
