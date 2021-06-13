@@ -25,6 +25,9 @@ class HostingService(db.Model):
     def get_request_headers(self):
         """
         get request headers for this service
+
+        todo:
+            discuss: does this belong to the crawler?
         """
         if self.type == "github":
             return dict(access_token=self.api_key)
@@ -47,10 +50,18 @@ class HostingService(db.Model):
             api_url=self.api_url,
             export_url=self.export_url,
             export_date=self.export_date,
-            service_label=self.get_service_label(),
         )
         if include_secrets:
-            d["request_headers"] = self.get_request_headers()
+            d["api_key"] = self.api_key
+        return d
+
+    def crawler_dict(self):
+        d = dict(
+            id=self.id,
+            type=self.type,
+            api_url=self.api_url,
+            request_headers=self.get_request_headers(),
+        )
         return d
 
     @classmethod
@@ -59,6 +70,8 @@ class HostingService(db.Model):
         hosting_service.type = d["type"]
         hosting_service.landingpage_url = d["landingpage_url"]
         hosting_service.api_url = d["api_url"]
-        hosting_service.api_key = d["api_key"]
+        hosting_service.api_key = d.get("api_key", "")
 
         return hosting_service
+    
+
