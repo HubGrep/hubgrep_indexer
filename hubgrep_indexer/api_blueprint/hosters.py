@@ -136,6 +136,6 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     if block_uid is not None:
         # TODO do we need more checks that everything is OK other than "it didnt break"?
-        state_manager.delete_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
+        state_manager.finish_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
 
     return jsonify(dict(status="ok")), 200

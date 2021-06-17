@@ -76,7 +76,7 @@ class StateManager:
     def push_new_block(self, hoster_prefix: str, block: Block) -> None:
         raise NotImplementedError
 
-    def delete_block(self, hoster_prefix: str, block_uid: str) -> Block:
+    def _delete_block(self, hoster_prefix: str, block_uid: str) -> Block:
         """
         deletes from state and returns block with block_id
         """
@@ -89,7 +89,7 @@ class StateManager:
         raise NotImplementedError
 
     def finish_block(self, hoster_prefix: str, block_uid: str):
-        return self.delete_block(hoster_prefix, block_uid)
+        return self._delete_block(hoster_prefix, block_uid)
 
     def reset(self, hoster_prefix: str):
         """
