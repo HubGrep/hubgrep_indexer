@@ -18,7 +18,7 @@ class GithubRepository(db.Model):
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
     homepage_url = db.Column(db.String(200))  # "homepageUrl": null,
-    url = db.Column(db.String(200)) # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
+    url = db.Column(db.String(200))  # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
     created_at = db.Column(db.DateTime)  # "createdAt": "2014-03-09T05:10:10Z",
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
@@ -37,13 +37,16 @@ class GithubRepository(db.Model):
     stargazer_count = db.Column(db.Integer)  # "stargazerCount": 0,
     fork_count = db.Column(db.Integer)  # "forkCount": 0,
     disk_usage = db.Column(db.Integer)  # "diskUsage": 192,
-    owner_login = db.Column(db.String(200)) #  "owner": {"login": "taxigps","id": "MDQ6VXNlcjEwMjQzNA==","url": "https://github.com/taxigps"
-    #"repositoryTopics": {
+    owner_login = db.Column(
+        db.String(200))  # "owner": {"login": "taxigps","id": "MDQ6VXNlcjEwMjQzNA==","url": "https://github.com/taxigps"
+    # "repositoryTopics": {
     #    "nodes": []
-    #},
+    # },
     primary_language_name = db.Column(db.String(200))  # "primaryLanguage": {"name": "Python"},
-    license_name = db.Column(db.String(200))  #  "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
-    license_nickname = db.Column(db.String(200))  #  "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
+    license_name = db.Column(
+        db.String(200))  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
+    license_nickname = db.Column(
+        db.String(200))  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
 
     @classmethod
     def github_id_from_base64(cls, gql_id: str) -> int:
@@ -56,7 +59,7 @@ class GithubRepository(db.Model):
         return repo_id
 
     @classmethod
-    def from_dict(cls, hosting_service_id, d: dict, update=True):
+    def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GithubRepository":
         owner_login = d['owner']['login']
         name = d['name']
 
@@ -75,7 +78,7 @@ class GithubRepository(db.Model):
         repo.name = name
         repo.homepage_url = d['homepageUrl']
         repo.url = d['url']
-        repo.created_at =  iso8601.parse_date(d['createdAt'])
+        repo.created_at = iso8601.parse_date(d['createdAt'])
         repo.updated_at = iso8601.parse_date(d['updatedAt'])
         repo.pushed_at = iso8601.parse_date(d['pushedAt'])
         repo.short_description_html = d['shortDescriptionHTML']
@@ -91,7 +94,10 @@ class GithubRepository(db.Model):
         repo.fork_count = d['forkCount']
         repo.disk_usage = d['diskUsage']
         repo.owner_login = owner_login
-        repo.primary_language_name = d['primaryLanguage']['name']
-        repo.license_name = d['licenseInfo']['name']
-        repo.license_nickname = d['licenseInfo']['nickname']
+        if isinstance(d['primaryLanguage'], dict):
+            repo.primary_language_name = d['primaryLanguage'].get('name', None)
+        if isinstance(d['licenseInfo'], dict):
+            repo.license_name = d['licenseInfo'].get('name', None)
+            repo.license_nickname = d['licenseInfo'].get('nickname', None)
+
         return repo

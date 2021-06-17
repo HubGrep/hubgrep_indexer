@@ -8,7 +8,7 @@ services:
 
   redis:
     image: redis
-    ports: 
+    ports:
       - 6379:6379
 
   service:
@@ -20,7 +20,7 @@ services:
 
     # uplink port to host
     ports:
-      - 8080:8080
+      - 8081:8080
 
     env_file: .env
 
