@@ -86,7 +86,13 @@ def get_block(hosting_service_id: int):
     else:
         block = state_manager.get_next_block(hosting_service_id)
     block_dict = block.to_dict()
-    block_dict["callback_url"] = url_for("api.add_repos", hosting_service_id=hosting_service_id, _external=True)
+
+    hosting_service = HostingService.query.get(hosting_service_id)
+    block_dict["crawler"] = hosting_service.crawler_dict()
+    block_dict["callback_url"] = url_for(f'api.add_repos',
+                                         hosting_service_id=hosting_service_id,
+                                         block_uid=block_dict["uid"],
+                                         _external=True)
     return jsonify(block_dict)
 
     """
@@ -110,7 +116,8 @@ def get_block(hosting_service_id: int):
 
 
 @api.route("/hosters/<hosting_service_id>/", methods=["post"])
-def add_repos(hosting_service_id: int):
+@api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["post"])
+def add_repos(hosting_service_id: int, block_uid: int = None):
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repos_dict = request.json
     # get repo class
@@ -126,5 +133,9 @@ def add_repos(hosting_service_id: int):
         r = RepoClass.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
+
+    if block_uid is not None:
+        # TODO do we need more checks that everything is OK other than "it didnt break"?
+        state_manager.finish_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
 
     return jsonify(dict(status="ok")), 200
