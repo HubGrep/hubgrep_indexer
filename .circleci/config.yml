@@ -5,6 +5,7 @@ jobs:
     machine: true
     steps:
       - checkout
+      - run: docker run -d --name redis redis
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
       - run: docker run --rm hubgrep_indexer:test /bin/bash -c "pytest"
    
