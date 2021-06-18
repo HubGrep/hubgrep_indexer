@@ -27,6 +27,7 @@ MarkupSafe==1.1.1
 packaging==20.9
 passlib==1.7.4
 pluggy==0.13.1
+psutil==5.8.0
 psycopg2-binary==2.8.6
 py==1.10.0
 pyparsing==2.4.7
@@ -40,6 +41,7 @@ python-dotenv==0.15.0
 python-editor==1.0.4
 pytz==2020.5
 redis==3.5.3
+redislite==6.0.674960
 requests==2.25.1
 six==1.15.0
 speaklater==1.3
