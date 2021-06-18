@@ -1,3 +1,4 @@
+import redislite
 import logging
 import time
 
@@ -58,6 +59,6 @@ class TestRedisStateManager(TestLocalStateManager):
     @pytest.fixture()
     def state_manager(self, test_app):
         manager = RedisStateManager()
-        manager.redis = redis.from_url(test_app.config['REDIS_URL'])
+        manager.redis = redislite.Redis()
         yield manager
         manager.reset(hoster)
