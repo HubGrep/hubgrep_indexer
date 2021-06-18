@@ -36,8 +36,5 @@ class TestHosters:
         assert response.json[0]['api_url'] == api_url
         assert response.json[0]['request_headers']['access_token'] == api_key
 
-    def add_repos_github(self, test_client):
-
-        test_client.post('/hosters/')
 
 

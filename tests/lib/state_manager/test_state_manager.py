@@ -50,7 +50,7 @@ class TestLocalStateManager:
         hoster = "hoster_1"
         block = state_manager.get_next_block(hoster)
         assert len(state_manager.get_blocks(hoster).keys()) == 1
-        state_manager.delete_block(hoster, block.uid)
+        state_manager._delete_block(hoster, block.uid)
         assert len(state_manager.get_blocks(hoster).keys()) == 0
 
 
