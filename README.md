@@ -17,7 +17,12 @@ then start the service and database
 run the initial migration in the container:
 
     docker-compose run --rm service /bin/bash
-    flask cli init
+    flask cli init-db
+
+also, you can import (and export) a list of hosting services:
+
+    flask cli export-hosters
+    flask cli import-hosters
 
 ## dev setup
 
