@@ -3,10 +3,10 @@ version: 2.1
 jobs:
   build-and-test:
     docker:
+      - image: docker:17.05.0-ce-git
       - image: redis
+    machine: true
     steps:
-      - setup_remote_docker:
-          version: 19.03.13
       - checkout
       - run: docker run -d --name redis redis
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
