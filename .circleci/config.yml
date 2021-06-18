@@ -7,7 +7,6 @@ jobs:
     steps:
       - setup_remote_docker:
           version: 19.03.13
-          docker_layer_caching: true
       - checkout
       - run: docker run -d --name redis redis
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
