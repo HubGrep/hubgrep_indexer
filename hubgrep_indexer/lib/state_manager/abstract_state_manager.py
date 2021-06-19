@@ -98,7 +98,7 @@ class StateManager:
         self.set_current_highest_repo_id(hoster_prefix, 0)
         for block in list(self.get_blocks(hoster_prefix).values())[:]:
             print("deleting", block)
-            self.delete_block(hoster_prefix, block_uid=block.uid)
+            self._delete_block(hoster_prefix, block_uid=block.uid)
 
     def get_next_block(self, hoster_prefix: str) -> Block:
         """
@@ -158,7 +158,7 @@ class LocalStateManager(StateManager):
     def set_current_highest_repo_id(self, hoster_prefix, highest_repo_id) -> None:
         self.current_highest_repo_ids[hoster_prefix] = highest_repo_id
 
-    def delete_block(self, hoster_prefix, block_uid: str) -> Block:
+    def _delete_block(self, hoster_prefix, block_uid: str) -> Block:
         hoster_blocks = self.blocks[hoster_prefix]
         block = hoster_blocks.pop(block_uid)
         return block

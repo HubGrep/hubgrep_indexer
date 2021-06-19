@@ -1,5 +1,7 @@
 import os
 
+VERSION = "0.0.0"
+
 class Config():
     DEBUG = False
     TESTING = False

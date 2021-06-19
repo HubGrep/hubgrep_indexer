@@ -1,3 +1,4 @@
+import redislite
 import os
 import tempfile
 import logging
@@ -13,6 +14,10 @@ from hubgrep_indexer import db, state_manager
 @pytest.fixture(scope="function")
 def test_app(request):
     app = create_app()
+
+    # set up a fake redis, so we dont need a redis container for the tests
+    state_manager.redis = redislite.Redis()
+
     db_fd, file_path = tempfile.mkstemp()
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{file_path}"
 

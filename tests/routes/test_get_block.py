@@ -3,9 +3,6 @@ from flask import current_app
 from hubgrep_indexer import db, state_manager
 
 
-
-
-
 class TestGithub:
     def test_get_block(self, test_app, hosting_service):
         with test_app.app_context() as app:

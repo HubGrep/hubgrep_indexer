@@ -1,3 +1,4 @@
+import redislite
 import logging
 import time
 
@@ -50,7 +51,7 @@ class TestLocalStateManager:
         hoster = "hoster_1"
         block = state_manager.get_next_block(hoster)
         assert len(state_manager.get_blocks(hoster).keys()) == 1
-        state_manager.delete_block(hoster, block.uid)
+        state_manager._delete_block(hoster, block.uid)
         assert len(state_manager.get_blocks(hoster).keys()) == 0
 
 
@@ -58,6 +59,6 @@ class TestRedisStateManager(TestLocalStateManager):
     @pytest.fixture()
     def state_manager(self, test_app):
         manager = RedisStateManager()
-        manager.redis = redis.from_url(test_app.config['REDIS_URL'])
+        manager.redis = redislite.Redis()
         yield manager
         manager.reset(hoster)
