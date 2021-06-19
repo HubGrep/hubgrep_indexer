@@ -5,13 +5,17 @@ services:
   postgres:
     image: postgres:13
     env_file: .env
+    networks:
+      - hubgrep_indexer
 
   redis:
     image: redis
     ports:
       - 6379:6379
+    networks:
+      - hubgrep_indexer
 
-  service:
+  hubgrep_indexer:
     build: .
     volumes:
     - ./:/var/task
@@ -30,6 +34,12 @@ services:
             flask run --host 0.0.0.0 --port 8080
             "
     tty: true
+    networks:
+      - hubgrep_indexer
+      - hubgrep
 
-volumes:
-  pgdata:
+
+networks:
+  hubgrep_indexer:
+  hubgrep:
+    name: hubgrep
