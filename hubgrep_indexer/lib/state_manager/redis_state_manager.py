@@ -58,7 +58,8 @@ class RedisStateManager(StateManager):
         redis_key = f"{hoster_prefix}:{self.run_uid_key}"
         if not self.redis.get(redis_key):
             self.set_run_uid(hoster_prefix)
-        return self.redis.get(redis_key)
+        run_uid_bytes: bytes = self.redis.get(redis_key)
+        return run_uid_bytes.decode()
 
     def _delete_block(self, hoster_prefix, block_uid):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"
