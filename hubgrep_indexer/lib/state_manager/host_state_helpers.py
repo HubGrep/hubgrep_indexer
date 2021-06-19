@@ -3,7 +3,7 @@ from hubgrep_indexer.lib.state_manager.abstract_state_manager import StateManage
 
 
 class IStateHelper:
-    empty_results_max = 20  # maximum of returned callbacks containing no results, before we blind-reset
+    empty_results_max = 5  # maximum of returned callbacks containing no results, before we blind-reset
 
     @staticmethod
     def resolve_state(hosting_service_id: str, state_manager: StateManager, block_uid: str, repos_dict: dict):
@@ -12,8 +12,6 @@ class IStateHelper:
 
         This assumes that we give out blocks based on pagination, and reaching the end of pagination means we reset the
         state and start over.
-
-        Importantly - this implementation is not intended for service_hosts that hand out empty results in the middle.
         """
         block = state_manager.get_blocks(hoster_prefix=hosting_service_id)[block_uid]
         state_manager.finish_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
@@ -51,9 +49,17 @@ class IStateHelper:
 
 
 class GitHubStateHelper(IStateHelper):
+    empty_results_max = 20
+
     @staticmethod
     def has_reached_end(block_uid: str, repos_dict: dict, block: Block, state_manager: StateManager) -> bool:
-        return False  # our github crawler will give us lots of gaps, let empty_counter decide instead.
+        """
+        We default to False for GitHub as we receive lots of gaps within results. Maybe a whole block contains private
+        repos and we get nothing back - therefore we cannot assume that we have reached the end when a block is empty.
+
+        We instead rely on the "IStateHelper.has_reached_end(...)" to resolve resetting GitHub.
+        """
+        return False
 
 
 class GiteaStateHelper(IStateHelper):
