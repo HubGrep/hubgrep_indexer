@@ -20,11 +20,11 @@ class TestLocalStateManager:
         manager.reset(hoster)
 
     def test_set_get_highest_repo_id(self, state_manager: LocalStateManager):
-        assert state_manager.get_current_highest_repo_id(hoster) == 0
-        state_manager.set_current_highest_repo_id(hoster, 1)
-        assert state_manager.get_current_highest_repo_id(hoster) == 1
-        state_manager.set_current_highest_repo_id(hoster, 0)
-        assert state_manager.get_current_highest_repo_id(hoster) == 0
+        assert state_manager.get_highest_block_repo_id(hoster) == 0
+        state_manager.set_highest_block_repo_id(hoster, 1)
+        assert state_manager.get_highest_block_repo_id(hoster) == 1
+        state_manager.set_highest_block_repo_id(hoster, 0)
+        assert state_manager.get_highest_block_repo_id(hoster) == 0
 
     def test_get_next_block(self, state_manager: LocalStateManager):
         # to_id should be batch_size for the first block
@@ -53,6 +53,16 @@ class TestLocalStateManager:
         assert len(state_manager.get_blocks(hoster).keys()) == 1
         state_manager._delete_block(hoster, block.uid)
         assert len(state_manager.get_blocks(hoster).keys()) == 0
+
+    def test_run_uid(self, state_manager: LocalStateManager):
+        hoster = "hoster_1"
+        initial_run_uid = state_manager.get_run_uid(hoster)
+        state_manager.reset(hoster)
+        second_run_uid = state_manager.get_run_uid(hoster)
+        assert initial_run_uid
+        assert second_run_uid
+        assert initial_run_uid != second_run_uid
+
 
 
 class TestRedisStateManager(TestLocalStateManager):

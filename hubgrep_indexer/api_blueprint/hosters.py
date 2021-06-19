@@ -1,6 +1,3 @@
-import click
-from flask import Blueprint, render_template
-from flask import current_app as app
 from flask import request
 from flask import url_for
 from flask import jsonify
@@ -11,6 +8,7 @@ from hubgrep_indexer.models.repositories.gitea import GiteaRepository
 from hubgrep_indexer import db, state_manager
 
 from hubgrep_indexer.api_blueprint import api
+
 
 # todo: needs_auth
 @api.route("/hosters", methods=["GET", "POST"])
@@ -135,7 +133,22 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     db.session.commit()
 
     if block_uid is not None:
-        # TODO do we need more checks that everything is OK other than "it didnt break"?
+        block_to_id = state_manager.get_blocks(hoster_prefix=hosting_service_id)[block_uid].to_id
+        highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(hoster_prefix=hosting_service_id)
+        is_confirmed_next = block_to_id == highest_confirmed_id + state_manager.batch_size
+        if is_confirmed_next and not len(repos_dict) > 0:
+            # if a batch returns nothing, we take that to mean that we start from the beginning again
+            # but only if its the next block from the confirmed highest id
+            state_manager.set_highest_block_repo_id(hoster_prefix=hosting_service_id, repo_id=0)
+            state_manager.set_highest_confirmed_repo_id(hoster_prefix=hosting_service_id, repo_id=0)
+        else:
+            state_manager.set_highest_confirmed_repo_id(hoster_prefix=hosting_service_id, repo_id=block_to_id)
+
         state_manager.finish_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
+
+    if len(repos_dict) > 0:
+        pass
+    else:
+        pass
 
     return jsonify(dict(status="ok")), 200

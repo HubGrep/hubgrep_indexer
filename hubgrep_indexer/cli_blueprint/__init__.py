@@ -1,7 +1,6 @@
 import json
 import click
-from flask import Blueprint, render_template
-from flask import current_app as app, request
+from flask import Blueprint
 import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService
