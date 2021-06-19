@@ -5,6 +5,8 @@ from flask import jsonify
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.github import GithubRepository
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
+from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
+from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer import db, state_manager
 
 from hubgrep_indexer.api_blueprint import api
@@ -116,15 +118,21 @@ def get_block(hosting_service_id: int):
 @api.route("/hosters/<hosting_service_id>/", methods=["post"])
 @api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["post"])
 def add_repos(hosting_service_id: int, block_uid: int = None):
+    """
+    Add repository data used in our search-index.
+
+    :param hosting_service_id: int - the registered hosting_service these repos belong to.
+    :param block_uid: (optional) int - if this arg is missing the repos will be added without affecting internal state.
+    """
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repos_dict = request.json
     # get repo class
-    if hosting_service.type == "github":
-        RepoClass = GithubRepository
-    elif hosting_service.type == "gitea":
-        RepoClass = GiteaRepository
-    else:
-        return jsonify(status="error"), 500
+
+    RepoClass = {
+        HOST_TYPE_GITHUB: GithubRepository,
+        HOST_TYPE_GITEA: GiteaRepository
+        # HOST_TYPE_GITLAB: crash on un-implemented...
+    }[hosting_service.type]
 
     # add repos to the db :)
     for repo_dict in repos_dict:
@@ -132,23 +140,10 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         db.session.add(r)
     db.session.commit()
 
-    if block_uid is not None:
-        block_to_id = state_manager.get_blocks(hoster_prefix=hosting_service_id)[block_uid].to_id
-        highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(hoster_prefix=hosting_service_id)
-        is_confirmed_next = block_to_id == highest_confirmed_id + state_manager.batch_size
-        if is_confirmed_next and not len(repos_dict) > 0:
-            # if a batch returns nothing, we take that to mean that we start from the beginning again
-            # but only if its the next block from the confirmed highest id
-            state_manager.set_highest_block_repo_id(hoster_prefix=hosting_service_id, repo_id=0)
-            state_manager.set_highest_confirmed_repo_id(hoster_prefix=hosting_service_id, repo_id=0)
-        else:
-            state_manager.set_highest_confirmed_repo_id(hoster_prefix=hosting_service_id, repo_id=block_to_id)
-
-        state_manager.finish_block(hoster_prefix=hosting_service_id, block_uid=block_uid)
-
-    if len(repos_dict) > 0:
-        pass
-    else:
-        pass
+    state_helper = get_state_helper(hosting_service.type)
+    state_helper.resolve_state(hosting_service_id=hosting_service_id,
+                               state_manager=state_manager,
+                               block_uid=block_uid,
+                               repos_dict=repos_dict)
 
     return jsonify(dict(status="ok")), 200

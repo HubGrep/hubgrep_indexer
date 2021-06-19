@@ -63,6 +63,15 @@ class TestLocalStateManager:
         assert second_run_uid
         assert initial_run_uid != second_run_uid
 
+    def test_empty_results_counter(self, state_manager: LocalStateManager):
+        hoster = "hoster_1"
+        new_count = 1
+        initial_counter_state = state_manager.get_empty_results_counter(hoster_prefix=hoster)
+        state_manager.set_empty_results_counter(hoster_prefix=hoster, count=new_count)
+        second_counter_state = state_manager.get_empty_results_counter(hoster_prefix=hoster)
+        assert initial_counter_state == 0
+        assert second_counter_state == new_count
+
 
 
 class TestRedisStateManager(TestLocalStateManager):

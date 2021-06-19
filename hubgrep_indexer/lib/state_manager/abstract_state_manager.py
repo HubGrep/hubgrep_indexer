@@ -86,6 +86,16 @@ class StateManager:
     def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id):
         raise NotImplementedError
 
+    def set_empty_results_counter(self, hoster_prefix: str, count: int):
+        raise NotImplementedError
+
+    def get_empty_results_counter(self, hoster_prefix: str) -> int:
+        raise NotImplementedError
+
+    def increment_empty_results_counter(self, hoster_prefix: str, amount: int = 1):
+        prev = self.get_empty_results_counter(hoster_prefix=hoster_prefix)
+        self.set_empty_results_counter(hoster_prefix=hoster_prefix, count=prev + amount)
+
     def push_new_block(self, hoster_prefix: str, block: Block) -> None:
         raise NotImplementedError
 
@@ -169,6 +179,7 @@ class LocalStateManager(StateManager):
         self.blocks: Dict[str, Dict[str, Block]] = {}
         self.current_highest_repo_ids = {}
         self.highest_confirmed_repo_ids = {}
+        self.empty_results_counter = {}
         self.run_uids = {}
 
     def push_new_block(self, hoster_prefix, block: Block) -> None:
@@ -208,3 +219,11 @@ class LocalStateManager(StateManager):
         if not self.run_uids.get(hoster_prefix, False):
             self.set_run_uid(hoster_prefix)
         return self.run_uids[hoster_prefix]
+
+    def set_empty_results_counter(self, hoster_prefix: str, count: int):
+        self.empty_results_counter[hoster_prefix] = count
+
+    def get_empty_results_counter(self, hoster_prefix: str) -> int:
+        if not self.empty_results_counter.get(hoster_prefix, False):
+            self.set_empty_results_counter(hoster_prefix, 0)
+        return self.empty_results_counter[hoster_prefix]

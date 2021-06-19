@@ -18,6 +18,7 @@ class RedisStateManager(StateManager):
         self.block_map_key = "blocks"
         self.highest_block_repo_id_key = "highest_block_repo_id"
         self.highest_confirmed_repo_id_key = "highest_confirmed_repo_id"
+        self.empty_results_counter_key = "empty_results_counter"
 
     def set_highest_block_repo_id(self, hoster_prefix: str, repo_id: int):
         redis_key = f"{hoster_prefix}:{self.highest_block_repo_id_key}"
@@ -44,6 +45,17 @@ class RedisStateManager(StateManager):
         else:
             highest_repo_id = int(repo_id_str)
         return highest_repo_id
+
+    def set_empty_results_counter(self, hoster_prefix: str, count: int):
+        redis_key = f"{hoster_prefix}:{self.empty_results_counter_key}"
+        self.redis.set(redis_key, count)
+
+    def get_empty_results_counter(self, hoster_prefix: str) -> int:
+        redis_key = f"{hoster_prefix}:{self.empty_results_counter_key}"
+        if not self.redis.get(redis_key):
+            self.set_empty_results_counter(hoster_prefix, 0)
+        counter_str: str = self.redis.get(redis_key)
+        return int(counter_str)
 
     def push_new_block(self, hoster_prefix, block: Block):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"
