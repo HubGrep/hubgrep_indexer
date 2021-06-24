@@ -125,9 +125,9 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     :param block_uid: (optional) int - if this arg is missing the repos will be added without affecting internal state.
     """
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
-    repos_dict = request.json
-    # get repo class
+    repo_dicts = request.json
 
+    # get repo class
     RepoClass = {
         HOST_TYPE_GITHUB: GithubRepository,
         HOST_TYPE_GITEA: GiteaRepository
@@ -135,7 +135,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     }[hosting_service.type]
 
     # add repos to the db :)
-    for repo_dict in repos_dict:
+    for repo_dict in repo_dicts:
         r = RepoClass.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
@@ -144,6 +144,6 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     state_helper.resolve_state(hosting_service_id=hosting_service_id,
                                state_manager=state_manager,
                                block_uid=block_uid,
-                               repos_dict=repos_dict)
+                               repo_dicts=repo_dicts)
 
     return jsonify(dict(status="ok")), 200
