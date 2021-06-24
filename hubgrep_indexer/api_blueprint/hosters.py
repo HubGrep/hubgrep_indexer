@@ -55,7 +55,7 @@ def hosters():
 @api.route("/hosters/<hosting_service_id>/state")
 def state(hosting_service_id: int):
     blocks = state_manager.get_blocks(hosting_service_id)
-    block_dicts = [block.as_dict for block in blocks.items()]
+    block_dicts = [block.to_dict() for block in blocks.values()]
     return jsonify(block_dicts)
     """
     return dict(
