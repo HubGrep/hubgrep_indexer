@@ -108,11 +108,12 @@ class TestHostStateHelpers:
                                        block_uid=_block_uid,
                                        repo_dicts=_repos)
 
+        runs = 100
         run_created_ats = [state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)]
-        for run_nr in range(3):
+        for run_nr in range(runs):
             # get some results
             first_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
-            repos = [{"id": id} for id in range(id_start * run_nr, id_start * (run_nr + 1))]
+            repos = [{"id": id} for id in range(id_start * run_nr + 1, id_start * (run_nr + 1) + 1)]
             resolve(first_block.uid, repos)
 
             # no more results, reset
@@ -129,8 +130,8 @@ class TestHostStateHelpers:
         second_last_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
         last_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
 
-        assert len(run_created_ats) == 4  # one per reset, plus one initial
-        assert len(set(run_created_ats)) == 4  # remove duplicates
+        assert len(run_created_ats) == runs + 1
+        assert len(set(run_created_ats)) == runs + 1  # remove duplicates
         assert len(state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX)) == 2  # no blocks left in state
         assert second_last_block.from_id == 1
         assert second_last_block.to_id == id_start
