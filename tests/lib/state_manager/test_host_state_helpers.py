@@ -9,6 +9,7 @@ HOSTER_TYPES = [HOST_TYPE_GITHUB, HOST_TYPE_GITLAB, HOST_TYPE_GITEA]
 
 
 class TestHostStateHelpers:
+
     @pytest.fixture()
     def state_manager(self):
         manager = LocalStateManager()
@@ -79,12 +80,12 @@ class TestHostStateHelpers:
         new_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
 
         state_helper = get_state_helper(hoster_type)
-        if (hoster_type == HOST_TYPE_GITHUB):
+        if hoster_type == HOST_TYPE_GITHUB:
             # making sure that github resolves into state-reset as well
             state_manager.set_empty_results_counter(hoster_prefix=HOSTER_PREFIX,
                                                     count=state_helper.empty_results_max - 1)
 
-        repos = []  # with no results, all but github should trigger a state-reset
+        repos = []
         state_helper.resolve_state(hosting_service_id=HOSTER_PREFIX,
                                    state_manager=state_manager,
                                    block_uid=new_block.uid,
@@ -94,3 +95,44 @@ class TestHostStateHelpers:
         new_run_created_ts = state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)
         assert len(blocks) == 0
         assert new_run_created_ts != old_block.run_created_ts
+
+    @pytest.mark.parametrize('hoster_type', HOSTER_TYPES)
+    def test_state_helpers_multiple_runs(self, hoster_type, state_manager: AbstractStateManager):
+        print(f'testing for: {hoster_type}')
+        state_helper = get_state_helper(hoster_type)
+        id_start = state_manager.batch_size
+
+        def resolve(_block_uid, _repos):
+            state_helper.resolve_state(hosting_service_id=HOSTER_PREFIX,
+                                       state_manager=state_manager,
+                                       block_uid=_block_uid,
+                                       repo_dicts=_repos)
+
+        run_created_ats = [state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)]
+        for run_nr in range(3):
+            # get some results
+            first_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+            repos = [{"id": id} for id in range(id_start * run_nr, id_start * (run_nr + 1))]
+            resolve(first_block.uid, repos)
+
+            # no more results, reset
+            second_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+            repos = []
+            if hoster_type == HOST_TYPE_GITHUB:
+                # making sure that github resolves into state-reset as well
+                state_manager.set_empty_results_counter(hoster_prefix=HOSTER_PREFIX,
+                                                        count=state_helper.empty_results_max - 1)
+            resolve(second_block.uid, repos)
+
+            run_created_ats.append(state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX))
+
+        second_last_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+        last_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+
+        assert len(run_created_ats) == 4  # one per reset, plus one initial
+        assert len(set(run_created_ats)) == 4  # remove duplicates
+        assert len(state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX)) == 2  # no blocks left in state
+        assert second_last_block.from_id == 1
+        assert second_last_block.to_id == id_start
+        assert last_block.from_id == id_start + 1
+        assert last_block.to_id == id_start * 2

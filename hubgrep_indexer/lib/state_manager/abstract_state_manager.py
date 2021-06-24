@@ -1,8 +1,11 @@
 import json
 import time
 import uuid
+import logging
 
 from typing import Dict
+
+logger = logging.getLogger(__name__)
 
 
 class Block:
@@ -124,11 +127,11 @@ class AbstractStateManager:
 
     def reset(self, hoster_prefix: str):
         """ Reset state under a specific prefix (i.e. one gitea instance, but not the rest). """
+        logger.debug(f'reset state for hoster: {hoster_prefix}')
         self.set_run_created_ts(hoster_prefix)
         self.set_highest_block_repo_id(hoster_prefix, 0)
         self.set_highest_confirmed_repo_id(hoster_prefix, 0)
         for block in list(self.get_blocks(hoster_prefix).values())[:]:
-            print("deleting", block)
             self._delete_block(hoster_prefix, block_uid=block.uid)
 
     def get_next_block(self, hoster_prefix: str) -> Block:

@@ -1,5 +1,9 @@
+import logging
+
 from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager, Block
+
+logger = logging.getLogger(__name__)
 
 
 class IStateHelper:
@@ -29,8 +33,10 @@ class IStateHelper:
                                                                                  state_manager=state_manager)
 
         if has_reached_end:
+            logger.info(f'crawler reached end for hoster: {hosting_service_id}')
             state_manager.reset(hoster_prefix=hosting_service_id)
         elif has_too_many_empty:
+            logger.info(f'crawler reach max empty results for hoster: {hosting_service_id}')
             state_manager.reset(hoster_prefix=hosting_service_id)
         else:
             if isinstance(block.ids, list) and len(block.ids) > 0:
