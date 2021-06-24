@@ -36,7 +36,7 @@ class Block:
         block.uid = d["uid"]
         block.from_id = d["from_id"]
         block.to_id = d["to_id"]
-        block.ids = d["ids"]
+        block.ids = d.get("ids", None)
         block.attempts_at = d["attempts_at"]
         block.status = d["status"]
         block.run_created_ts = d["run_created_ts"]
