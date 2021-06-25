@@ -51,7 +51,7 @@ class GithubRepository(db.Model):
     @classmethod
     def github_id_from_base64(cls, gql_id: str) -> int:
         """
-        transform githubs graphql ids to actual ids
+        transform githubs graphql ids to their actual ids
         """
         # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==" => b'010:Repository17558226'
         decoded = base64.b64decode(gql_id).decode()

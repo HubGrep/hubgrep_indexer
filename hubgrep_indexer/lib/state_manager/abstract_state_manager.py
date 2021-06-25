@@ -1,32 +1,36 @@
 import json
-import redis
 import time
 import uuid
+import logging
 
-from typing import Dict, List
+from typing import Dict
+
+logger = logging.getLogger(__name__)
 
 
 class Block:
     """
-    represents a "block" in the github repository id range
-
+    A "block" is a range of repository ID's to be crawled as a batch job.
     """
 
-    # todo: add "ids" for ranges we already know, instead of from/to_id
-    #
     def __init__(self):
         self.uid = uuid.uuid4().hex
+        self.run_created_ts = None
         self.from_id = None
         self.to_id = None
+        # todo: add specific "ids" when we already know they exist (github)
+        self.ids = None
         self.attempts_at = []
         self.status = ""
 
     @classmethod
-    def new(cls, from_id, to_id):
+    def new(cls, from_id, to_id, run_created_ts=None, ids=None):
         block = Block()
         block.from_id = from_id
         block.to_id = to_id
+        block.ids = ids
         block.attempts_at.append(time.time())
+        block.run_created_ts = run_created_ts
         return block
 
     @classmethod
@@ -35,8 +39,10 @@ class Block:
         block.uid = d["uid"]
         block.from_id = d["from_id"]
         block.to_id = d["to_id"]
+        block.ids = d.get("ids", None)
         block.attempts_at = d["attempts_at"]
         block.status = d["status"]
+        block.run_created_ts = d["run_created_ts"]
         return block
 
     @classmethod
@@ -49,8 +55,10 @@ class Block:
             uid=self.uid,
             from_id=self.from_id,
             to_id=self.to_id,
+            ids=self.ids,
             attempts_at=self.attempts_at,
             status=self.status,
+            run_created_ts=self.run_created_ts,
         )
 
     def to_json(self):
@@ -58,64 +66,110 @@ class Block:
         return json.dumps(d)
 
     def __repr__(self):
+        # TODO new repr as we have either from/to_id and/or ids
         return f"<Block {self.uid}: {self.from_id}-{self.to_id}>"
 
 
-class StateManager:
+class AbstractStateManager:
     """
-    base class for state managers
+    Base class for state managers.
     """
 
     def __init__(self, batch_size=1000, block_timeout=1000):
         self.batch_size = batch_size  # block size for a crawler
         self.block_timeout = block_timeout  # seconds
 
-    def get_current_highest_repo_id(self, hoster_prefix: str) -> int:
+    def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
+        """
+        The highest (last) repo_id we have tried asking for,
+        but do not know for sure exist.
+        """
         raise NotImplementedError
+
+    def set_highest_block_repo_id(self, hoster_prefix: str, repo_id):
+        """
+        The highest (last) repo_id we have tried asking for,
+        but do not know for sure exist.
+        """
+        raise NotImplementedError
+
+    def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
+        """
+        The highest (last) repo_id we have received from crawlers,
+        guaranteeing its existence.
+        """
+        raise NotImplementedError
+
+    def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id):
+        """
+        The highest (last) repo_id we have received from crawlers,
+        guaranteeing its existence.
+        """
+        raise NotImplementedError
+
+    def set_empty_results_counter(self, hoster_prefix: str, count: int):
+        raise NotImplementedError
+
+    def get_empty_results_counter(self, hoster_prefix: str) -> int:
+        raise NotImplementedError
+
+    def increment_empty_results_counter(self, hoster_prefix: str, amount: int = 1):
+        prev = self.get_empty_results_counter(hoster_prefix=hoster_prefix)
+        self.set_empty_results_counter(hoster_prefix=hoster_prefix, count=prev + amount)
 
     def push_new_block(self, hoster_prefix: str, block: Block) -> None:
         raise NotImplementedError
 
     def _delete_block(self, hoster_prefix: str, block_uid: str) -> Block:
-        """
-        deletes from state and returns block with block_id
-        """
+        """Deletes from state and returns the deleted Block."""
         raise NotImplementedError
 
     def get_blocks(self, hoster_prefix: str) -> Dict[str, Block]:
         raise NotImplementedError
 
-    def set_current_highest_repo_id(self, hoster_prefix: str, highest_repo_id):
+    def finish_block(self, hoster_prefix: str, block_uid: str):
+        """Cleanup after a block is considered completed."""
+        return self._delete_block(hoster_prefix, block_uid)
+
+    def set_run_created_ts(self, hoster_prefix):
         raise NotImplementedError
 
-    def finish_block(self, hoster_prefix: str, block_uid: str):
-        return self._delete_block(hoster_prefix, block_uid)
+    def get_run_created_ts(self, hoster_prefix):
+        raise NotImplementedError
 
     def reset(self, hoster_prefix: str):
         """
-        reset state manager
+        Reset state under a specific prefix
+        (i.e. one gitea instance, but not the rest).
         """
-        self.set_current_highest_repo_id(hoster_prefix, 0)
+        logger.debug(f"reset state for hoster: {hoster_prefix}")
+        self.set_run_created_ts(hoster_prefix)
+        self.set_highest_block_repo_id(hoster_prefix, 0)
+        self.set_highest_confirmed_repo_id(hoster_prefix, 0)
         for block in list(self.get_blocks(hoster_prefix).values())[:]:
-            print("deleting", block)
             self._delete_block(hoster_prefix, block_uid=block.uid)
 
     def get_next_block(self, hoster_prefix: str) -> Block:
         """
-        return the next new block
+        Return the next new block.
         """
-        current_highest_repo_id = self.get_current_highest_repo_id(hoster_prefix)
-        from_id = current_highest_repo_id + 1
-        to_id = current_highest_repo_id + self.batch_size
+        highest_block_repo_id = self.get_highest_block_repo_id(hoster_prefix)
+        from_id = highest_block_repo_id + 1
+        to_id = highest_block_repo_id + self.batch_size
 
-        block = Block.new(from_id=from_id, to_id=to_id)
+        run_created_ts = self.get_run_created_ts(hoster_prefix)
+        if not run_created_ts:
+            self.set_run_created_ts(hoster_prefix)
+            run_created_ts = self.get_run_created_ts(hoster_prefix)
+
+        block = Block.new(run_created_ts=run_created_ts, from_id=from_id, to_id=to_id)
         self.push_new_block(hoster_prefix, block)
-        self.set_current_highest_repo_id(hoster_prefix, block.to_id)
+        self.set_highest_block_repo_id(hoster_prefix, block.to_id)
         return block
 
     def get_timed_out_block(self, hoster_prefix: str, timestamp_now=None) -> Block:
         """
-        try to get a block we didnt receive an answer for
+        Try to get a block we didnt receive an answer for.
 
         timestamp_now: use a timestamp instead of time.time()
         (useful for testing (...and time travel?))
@@ -130,12 +184,11 @@ class StateManager:
         return None
 
 
-class LocalStateManager(StateManager):
+class LocalStateManager(AbstractStateManager):
     """
-    local state manager, using plain dicts for storage
-    mostly to run tests for the StateManager code without much overhead
+    Local state manager, using plain dicts for storage.
 
-    stored in memory, at runtime
+    Stored in memory, at runtime, as a convenience class for testing without overhead.
     """
 
     def __init__(self):
@@ -146,6 +199,9 @@ class LocalStateManager(StateManager):
         # current_highest_repo_ids = {"hoster_prefix" : {current_highest_repo_id": 0}
         self.blocks: Dict[str, Dict[str, Block]] = {}
         self.current_highest_repo_ids = {}
+        self.highest_confirmed_repo_ids = {}
+        self.empty_results_counter = {}
+        self.run_created_timestamps = {}
 
     def push_new_block(self, hoster_prefix, block: Block) -> None:
         if not self.blocks.get(hoster_prefix, False):
@@ -155,15 +211,39 @@ class LocalStateManager(StateManager):
     def get_blocks(self, hoster_prefix) -> Dict[str, Block]:
         return self.blocks.get(hoster_prefix, {})
 
-    def set_current_highest_repo_id(self, hoster_prefix, highest_repo_id) -> None:
-        self.current_highest_repo_ids[hoster_prefix] = highest_repo_id
+    def set_highest_block_repo_id(self, hoster_prefix, repo_id) -> None:
+        self.current_highest_repo_ids[hoster_prefix] = repo_id
+
+    def get_highest_block_repo_id(self, hoster_prefix) -> int:
+        if not self.current_highest_repo_ids.get(hoster_prefix, False):
+            self.current_highest_repo_ids[hoster_prefix] = 0
+        return self.current_highest_repo_ids[hoster_prefix]
 
     def _delete_block(self, hoster_prefix, block_uid: str) -> Block:
         hoster_blocks = self.blocks[hoster_prefix]
         block = hoster_blocks.pop(block_uid)
         return block
 
-    def get_current_highest_repo_id(self, hoster_prefix) -> int:
-        if not self.current_highest_repo_ids.get(hoster_prefix, False):
-            self.current_highest_repo_ids[hoster_prefix] = 0
-        return self.current_highest_repo_ids[hoster_prefix]
+    def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id: int):
+        self.highest_confirmed_repo_ids[hoster_prefix] = repo_id
+
+    def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
+        if not self.highest_confirmed_repo_ids.get(hoster_prefix, False):
+            self.highest_confirmed_repo_ids[hoster_prefix] = 0
+        return self.highest_confirmed_repo_ids[hoster_prefix]
+
+    def set_run_created_ts(self, hoster_prefix):
+        self.run_created_timestamps[hoster_prefix] = time.time()
+
+    def get_run_created_ts(self, hoster_prefix):
+        if not self.run_created_timestamps.get(hoster_prefix, False):
+            self.set_run_created_ts(hoster_prefix)
+        return self.run_created_timestamps[hoster_prefix]
+
+    def set_empty_results_counter(self, hoster_prefix: str, count: int):
+        self.empty_results_counter[hoster_prefix] = count
+
+    def get_empty_results_counter(self, hoster_prefix: str) -> int:
+        if not self.empty_results_counter.get(hoster_prefix, False):
+            self.set_empty_results_counter(hoster_prefix, 0)
+        return self.empty_results_counter[hoster_prefix]
