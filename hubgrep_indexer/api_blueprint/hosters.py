@@ -115,8 +115,8 @@ def get_block(hosting_service_id: int):
     """
 
 
-@api.route("/hosters/<hosting_service_id>/", methods=["post"])
-@api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["post"])
+@api.route("/hosters/<hosting_service_id>/", methods=["PUT"])
+@api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["PUT"])
 def add_repos(hosting_service_id: int, block_uid: int = None):
     """
     Add repository data used in our search-index.
