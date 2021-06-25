@@ -13,13 +13,6 @@ from hubgrep_indexer import db
 
 
 @cli_bp.cli.command()
-def init_db():
-    db.create_all()
-    # user_datastore.create_user(email="test@me.com", password=hash_password("password"))
-    db.session.commit()
-
-
-@cli_bp.cli.command()
 def export_hosters():
     services = []
     for hosting_service in HostingService.query.all():
