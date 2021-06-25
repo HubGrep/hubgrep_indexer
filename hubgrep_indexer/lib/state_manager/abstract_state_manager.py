@@ -58,7 +58,7 @@ class Block:
             ids=self.ids,
             attempts_at=self.attempts_at,
             status=self.status,
-            run_created_ts=self.run_created_ts
+            run_created_ts=self.run_created_ts,
         )
 
     def to_json(self):
@@ -80,19 +80,31 @@ class AbstractStateManager:
         self.block_timeout = block_timeout  # seconds
 
     def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
-        """ The highest (last) repo_id we have tried asking for, but do not know for sure exist. """
+        """
+        The highest (last) repo_id we have tried asking for,
+        but do not know for sure exist.
+        """
         raise NotImplementedError
 
     def set_highest_block_repo_id(self, hoster_prefix: str, repo_id):
-        """ The highest (last) repo_id we have tried asking for, but do not know for sure exist. """
+        """
+        The highest (last) repo_id we have tried asking for,
+        but do not know for sure exist.
+        """
         raise NotImplementedError
 
     def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
-        """ The highest (last) repo_id we have received from crawlers, guaranteeing its existence. """
+        """
+        The highest (last) repo_id we have received from crawlers,
+        guaranteeing its existence.
+        """
         raise NotImplementedError
 
     def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id):
-        """ The highest (last) repo_id we have received from crawlers, guaranteeing its existence. """
+        """
+        The highest (last) repo_id we have received from crawlers,
+        guaranteeing its existence.
+        """
         raise NotImplementedError
 
     def set_empty_results_counter(self, hoster_prefix: str, count: int):
@@ -109,14 +121,14 @@ class AbstractStateManager:
         raise NotImplementedError
 
     def _delete_block(self, hoster_prefix: str, block_uid: str) -> Block:
-        """ Deletes from state and returns the deleted Block. """
+        """Deletes from state and returns the deleted Block."""
         raise NotImplementedError
 
     def get_blocks(self, hoster_prefix: str) -> Dict[str, Block]:
         raise NotImplementedError
 
     def finish_block(self, hoster_prefix: str, block_uid: str):
-        """ Cleanup after a block is considered completed. """
+        """Cleanup after a block is considered completed."""
         return self._delete_block(hoster_prefix, block_uid)
 
     def set_run_created_ts(self, hoster_prefix):
@@ -126,8 +138,11 @@ class AbstractStateManager:
         raise NotImplementedError
 
     def reset(self, hoster_prefix: str):
-        """ Reset state under a specific prefix (i.e. one gitea instance, but not the rest). """
-        logger.debug(f'reset state for hoster: {hoster_prefix}')
+        """
+        Reset state under a specific prefix
+        (i.e. one gitea instance, but not the rest).
+        """
+        logger.debug(f"reset state for hoster: {hoster_prefix}")
         self.set_run_created_ts(hoster_prefix)
         self.set_highest_block_repo_id(hoster_prefix, 0)
         self.set_highest_confirmed_repo_id(hoster_prefix, 0)
@@ -135,10 +150,13 @@ class AbstractStateManager:
             self._delete_block(hoster_prefix, block_uid=block.uid)
 
     def get_next_block(self, hoster_prefix: str) -> Block:
-        """ Return the next new block. """
+        """
+        Return the next new block.
+        """
         highest_block_repo_id = self.get_highest_block_repo_id(hoster_prefix)
         from_id = highest_block_repo_id + 1
         to_id = highest_block_repo_id + self.batch_size
+
         run_created_ts = self.get_run_created_ts(hoster_prefix)
         if not run_created_ts:
             self.set_run_created_ts(hoster_prefix)

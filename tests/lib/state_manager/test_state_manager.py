@@ -16,11 +16,16 @@ class TestLocalStateManager:
         manager.reset(HOSTER_PREFIX)
 
     def test_set_get_highest_repo_id(self, state_manager: AbstractStateManager):
-        assert state_manager.get_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX) == 0
-        state_manager.set_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX, repo_id=1)
-        assert state_manager.get_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX) == 1
-        state_manager.set_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX, repo_id=0)
-        assert state_manager.get_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX) == 0
+        assert state_manager.get_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX) == 0
+        state_manager.set_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX, repo_id=1)
+        assert state_manager.get_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX) == 1
+        state_manager.set_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX, repo_id=0)
+        assert state_manager.get_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX) == 0
 
     def test_get_next_block(self, state_manager: AbstractStateManager):
         # to_id should be batch_size for the first block
@@ -43,26 +48,34 @@ class TestLocalStateManager:
 
     def test_delete_block(self, state_manager: AbstractStateManager):
         block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
-        assert len(state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX).keys()) == 1
-        state_manager._delete_block(hoster_prefix=HOSTER_PREFIX, block_uid=block.uid)
-        assert len(state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX).keys()) == 0
+        assert len(state_manager.get_blocks(
+            hoster_prefix=HOSTER_PREFIX).keys()) == 1
+        state_manager._delete_block(
+            hoster_prefix=HOSTER_PREFIX, block_uid=block.uid)
+        assert len(state_manager.get_blocks(
+            hoster_prefix=HOSTER_PREFIX).keys()) == 0
 
     def test_finish_block(self, state_manager: AbstractStateManager):
         self.test_delete_block(state_manager=state_manager)
 
     def test_run_created_ts(self, state_manager: AbstractStateManager):
-        initial_run_created_ts = state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)
+        initial_run_created_ts = state_manager.get_run_created_ts(
+            hoster_prefix=HOSTER_PREFIX)
         state_manager.reset(hoster_prefix=HOSTER_PREFIX)
-        second_run_created_ts = state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)
+        second_run_created_ts = state_manager.get_run_created_ts(
+            hoster_prefix=HOSTER_PREFIX)
         assert initial_run_created_ts
         assert second_run_created_ts
         assert initial_run_created_ts != second_run_created_ts
 
     def test_empty_results_counter(self, state_manager: AbstractStateManager):
         new_count = 1
-        initial_counter_state = state_manager.get_empty_results_counter(hoster_prefix=HOSTER_PREFIX)
-        state_manager.set_empty_results_counter(hoster_prefix=HOSTER_PREFIX, count=new_count)
-        second_counter_state = state_manager.get_empty_results_counter(hoster_prefix=HOSTER_PREFIX)
+        initial_counter_state = state_manager.get_empty_results_counter(
+            hoster_prefix=HOSTER_PREFIX)
+        state_manager.set_empty_results_counter(
+            hoster_prefix=HOSTER_PREFIX, count=new_count)
+        second_counter_state = state_manager.get_empty_results_counter(
+            hoster_prefix=HOSTER_PREFIX)
         assert initial_counter_state == 0
         assert second_counter_state == new_count
 
@@ -71,16 +84,22 @@ class TestLocalStateManager:
         old_highest_confirmed_id = 100
         old_highest_block_id = 200
         old_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
-        old_run_created_ts = state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)
-        state_manager.set_highest_confirmed_repo_id(hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_confirmed_id)
-        state_manager.set_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_block_id)
+        old_run_created_ts = state_manager.get_run_created_ts(
+            hoster_prefix=HOSTER_PREFIX)
+        state_manager.set_highest_confirmed_repo_id(
+            hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_confirmed_id)
+        state_manager.set_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_block_id)
         state_manager.reset(hoster_prefix=HOSTER_PREFIX)
         new_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
 
         # test that our setup took effect (old block is gone, only new one left)
-        new_highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(hoster_prefix=HOSTER_PREFIX)
-        new_highest_block_id = state_manager.get_highest_block_repo_id(hoster_prefix=HOSTER_PREFIX)
-        new_run_created_ts = state_manager.get_run_created_ts(hoster_prefix=HOSTER_PREFIX)
+        new_highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(
+            hoster_prefix=HOSTER_PREFIX)
+        new_highest_block_id = state_manager.get_highest_block_repo_id(
+            hoster_prefix=HOSTER_PREFIX)
+        new_run_created_ts = state_manager.get_run_created_ts(
+            hoster_prefix=HOSTER_PREFIX)
         new_blocks = state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX)
         assert new_highest_confirmed_id != old_highest_confirmed_id
         assert new_highest_block_id != old_highest_block_id

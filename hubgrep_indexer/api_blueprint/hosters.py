@@ -124,15 +124,19 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     :param hosting_service_id: int - the registered hosting_service these repos belong to.
     :param block_uid: (optional) int - if this arg is missing the repos will be added without affecting internal state.
     """
-    hosting_service: HostingService = HostingService.query.get(hosting_service_id)
+    hosting_service: HostingService = HostingService.query.get(
+        hosting_service_id)
     repo_dicts = request.json
 
     # get repo class
-    RepoClass = {
+    RepoClasses = {
         HOST_TYPE_GITHUB: GithubRepository,
         HOST_TYPE_GITEA: GiteaRepository
-        # HOST_TYPE_GITLAB: crash on un-implemented...
-    }[hosting_service.type]
+        # HOST_TYPE_GITLAB: not implemented
+    }
+    RepoClass = RepoClasses.get(hosting_service.type)
+    if not RepoClass:
+        return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
     for repo_dict in repo_dicts:
