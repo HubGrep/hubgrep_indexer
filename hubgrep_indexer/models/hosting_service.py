@@ -1,7 +1,17 @@
+import csv
 import re
 import json
 import logging
+
+from typing import BinaryIO
+from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
+from hubgrep_indexer.models.repositories.gitea import GiteaRepository
+from hubgrep_indexer.models.repositories.github import GithubRepository
+from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
+
+
 from hubgrep_indexer import db
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,5 +83,28 @@ class HostingService(db.Model):
         hosting_service.api_key = d.get("api_key", "")
 
         return hosting_service
-    
+
+    def get_csv(self, buffer: BinaryIO):
+        fieldnames = ["type", "landingpage_url", "api_url"]
+        dict_writer = csv.DictWriter(
+            buffer,
+            fieldnames=fieldnames,
+            delimiter=";",
+        )
+        dict_writer.writeheader()
+        dict_writer.writerow(self.to_dict())
+        return buffer
+
+    @property
+    def repo_class(self):
+        RepoClasses = {
+            HOST_TYPE_GITHUB: GithubRepository,
+            HOST_TYPE_GITEA: GiteaRepository,
+            HOST_TYPE_GITLAB: GitlabRepository
+        }
+        return RepoClasses[self.type]
+
+    @property
+    def repos(self):
+        return self.repo_class.query.filter_by(hoster=self)
 

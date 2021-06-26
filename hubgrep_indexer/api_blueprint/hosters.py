@@ -6,13 +6,6 @@ import logging
 from typing import List
 
 from hubgrep_indexer.models.hosting_service import HostingService
-from hubgrep_indexer.models.repositories.github import GithubRepository
-from hubgrep_indexer.models.repositories.gitea import GiteaRepository
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-    HOST_TYPE_GITEA,
-    HOST_TYPE_GITLAB,
-)
 from hubgrep_indexer.lib.block_helpers import (
     get_block_for_crawler,
     get_loadbalanced_block_for_crawler,
@@ -25,10 +18,8 @@ from hubgrep_indexer.api_blueprint import api
 
 logger = logging.getLogger(__name__)
 
+
 # todo: needs_auth
-from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
-
-
 @api.route("/hosters", methods=["GET", "POST"])
 def hosters():
     if request.method == "GET":
@@ -53,7 +44,7 @@ def hosters():
         return jsonify(hosting_service.crawler_dict())
 
 
-@api.route("/hosters/<hosting_service_id>/state")
+@api.route("/hosters/<hosting_service_id>/state", methods=['GET'])
 def state(hosting_service_id: int):
     blocks = state_manager.get_blocks(hosting_service_id)
     block_dicts = [block.to_dict() for block in blocks.values()]
@@ -93,6 +84,7 @@ def get_loadbalanced_block(type: str):
 
 
 @api.route("/hosters/<hosting_service_id>/block")
+@api.route("/hosters/<hosting_service_id>/block", methods=['GET'])
 def get_block(hosting_service_id: int):
     block_dict = get_block_for_crawler(hosting_service_id)
     if not block_dict:
@@ -135,19 +127,12 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
 
-    # get repo class
-    RepoClasses = {
-        HOST_TYPE_GITHUB: GithubRepository,
-        HOST_TYPE_GITEA: GiteaRepository,
-        HOST_TYPE_GITLAB: GitlabRepository
-    }
-    RepoClass = RepoClasses.get(hosting_service.type)
-    if not RepoClass:
+    if not hosting_service.repo_class:
         return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
     for repo_dict in repo_dicts:
-        r = RepoClass.from_dict(hosting_service_id, repo_dict)
+        r = hosting_service.repo_class.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
 

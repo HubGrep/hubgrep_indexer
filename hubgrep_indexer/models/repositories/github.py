@@ -2,18 +2,17 @@ import base64
 from iso8601 import iso8601
 import json
 import logging
+from typing import Dict
+
 from hubgrep_indexer import db
+
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 logger = logging.getLogger(__name__)
 
 
-class GithubRepository(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
-    hosting_service_id = db.Column(
-        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
-    )
-    hosting_service = db.relationship("HostingService")
+class GithubRepository(Repository):
+    __tablename__ = "github_repositories"
 
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
@@ -101,3 +100,31 @@ class GithubRepository(db.Model):
             repo.license_nickname = d['licenseInfo'].get('nickname', None)
 
         return repo
+
+    def to_dict(self) -> Dict[str, str]:
+        repo = dict()
+        repo["hosting_service_id"] = self.hosting_service_id
+        repo["github_id"] = self.github_id
+        repo["name"] = self.name
+        repo["homepage_url"] = self.homepage_url
+        repo["url"] = self.url
+        repo["created_at"] = self.created_at
+        repo["updated_at"] = self.updated_at
+        repo["pushed_at"] = self.pushed_at
+        repo["short_description_html"] = self.short_description_html
+        repo["description"] = self.description
+        repo["is_archived"] = self.is_archived
+        repo["is_private"] = self.is_private
+        repo["is_fork"] = self.is_fork
+        repo["is_empty"] = self.is_empty
+        repo["is_disabled"] = self.is_disabled
+        repo["is_locked"] = self.is_locked
+        repo["is_template"] = self.is_template
+        repo["stargazer_count"] = self.stargazer_count
+        repo["fork_count"] = self.fork_count
+        repo["disk_usage"] = self.disk_usage
+        repo["owner_login"] = self.owner_login
+        repo["primary_language_name"] = self.primary_language_name
+        repo["license_name"] = self.license_name
+        repo["license_nickname"] = self.license_nickname
+

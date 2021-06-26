@@ -1,6 +1,8 @@
+from typing import Dict
 from iso8601 import iso8601
 
 from hubgrep_indexer import db
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 """
     {'id': 2,
@@ -36,13 +38,8 @@ from hubgrep_indexer import db
     """
 
 
-class GiteaRepository(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
-    hosting_service_id = db.Column(
-        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
-    )
-    hosting_service = db.relationship("HostingService")
+class GiteaRepository(Repository):
+    __tablename__ = "gitea_repositories"
 
     gitea_id = db.Column(db.Integer)  # 2
     name = db.Column(db.String(200))  # "repo_name",
@@ -63,6 +60,27 @@ class GiteaRepository(db.Model):
     created_at = db.Column(db.DateTime)  # "createdAt": "2014-03-09T05:10:10Z",
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
+
+    export_keys = [
+        "gitea_id",
+        "name",
+        "owner_username",
+        "description",
+        "empty",
+        "private",
+        "fork",
+        "mirror",
+        "size",
+        "website",
+        "stars_count",
+        "forks_count",
+        "watchers_count",
+        "open_issues_count",
+        "default_branch",
+        "created_at",
+        "updated_at",
+        "pushed_at",
+    ]
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
@@ -99,3 +117,26 @@ class GiteaRepository(db.Model):
         repo.updated_at = iso8601.parse_date(d["updated_at"])
 
         return repo
+
+    def to_dict(self) -> Dict[str, str]:
+        repo = dict()
+        repo["hosting_service_id"] = self.hosting_service_id
+        repo["gitea_id"] = self.id
+        repo["name"] = self.name
+        repo["owner_username"] = self.owner_username
+        repo["description"] = self.description
+        repo["empty"] = self.empty
+        repo["private"] = self.private
+        repo["fork"] = self.fork
+        repo["mirror"] = self.mirror
+        repo["size"] = self.size
+        repo["website"] = self.website
+        repo["stars_count"] = self.stars_count
+        repo["forks_count"] = self.forks_count
+        repo["watchers_count"] = self.watchers_count
+        repo["open_issues_count"] = self.open_issues_count
+        repo["default_branch"] = self.default_branch
+        repo["created_at"] = self.created_at
+        repo["updated_at"] = self.updated_at
+        return repo
+

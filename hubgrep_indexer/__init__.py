@@ -1,3 +1,4 @@
+from werkzeug.serving import WSGIRequestHandler
 import os
 from flask import Flask
 from flask_migrate import Migrate
@@ -16,7 +17,6 @@ state_manager = RedisStateManager()
 logger = logging.getLogger(__name__)
 
 # fix keep-alive in dev server (dropped connections from client sessions)
-from werkzeug.serving import WSGIRequestHandler
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
 
@@ -52,7 +52,3 @@ def create_app():
     app.register_blueprint(frontend)
     app.register_blueprint(cli_bp)
     return app
-
-
-
-
