@@ -81,11 +81,11 @@ class Repository(db.Model):
     @classmethod
     def export_json_gz(cls, hosting_service_id, chunk_size=1000):
         # todo: add gzip  https://stackoverflow.com/a/57758563
-        with open('/tmp/streamed_write.json', 'w') as outfile:
+        with gzip.open(f'/tmp/hoster_{hosting_service_id}.json.gz', 'wt', encoding='UTF-8') as zipfile:
             large_generator_handle = cls._get_repo_list_chunks(hosting_service_id, chunk_size)
             stream_array = StreamArray(large_generator_handle)
             for chunk in DateTimeEncoder().iterencode(stream_array):
-                outfile.write(chunk)
+                zipfile.write(chunk)
 
     def to_dict(self):
         raise NotImplementedError
