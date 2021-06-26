@@ -1,10 +1,9 @@
 import time
 from flask import request
-from flask import url_for
 from flask import jsonify
 
 import logging
-from typing import List, Dict
+from typing import List
 
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.github import GithubRepository
@@ -14,7 +13,11 @@ from hubgrep_indexer.constants import (
     HOST_TYPE_GITEA,
     HOST_TYPE_GITLAB,
 )
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
+from hubgrep_indexer.lib.block_helpers import (
+    get_block_for_crawler,
+    get_loadbalanced_block_for_crawler,
+)
+
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer import db, state_manager
 
@@ -46,21 +49,6 @@ def hosters():
         db.session.commit()
         return jsonify(hosting_service.crawler_dict())
 
-    [
-        {
-            # is this our PK?
-            "api_url": "https://...",
-            # config for this hoster in hubgrep_search
-            # api key isnt needed for local search, and shouldnt be handed out
-            "landingpage_url": "https://...",
-            "label": "some_label",
-            "type": "gitea",
-            # gzipped csv export
-            "export_url": "https://path/to/export_some_label_2021-01-01.csv.gz",
-            "export_date": "2021-01-01...",
-        },
-    ]
-
 
 @api.route("/hosters/<hosting_service_id>/state")
 def state(hosting_service_id: int):
@@ -88,76 +76,22 @@ def state(hosting_service_id: int):
     """
 
 
-def _get_block(hosting_service_id) -> Block:
-    timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
-    if timed_out_block:
-        block = timed_out_block
-    else:
-        block = state_manager.get_next_block(hosting_service_id)
-    block_dict = block.to_dict()
-
-    hosting_service = HostingService.query.get(hosting_service_id)
-    logger.info(f"getting block for {hosting_service}")
-
-    block_dict["crawler"] = hosting_service.crawler_dict()
-    block_dict["callback_url"] = url_for(
-        "api.add_repos",
-        hosting_service_id=hosting_service.id,
-        block_uid=block_dict["uid"],
-        _external=True,
-    )
-    return block_dict
-
-def _get_loadbalanced_block(type) -> Dict:
-    # get all states
-    hoster_id_state = {}
-    for hosting_service in HostingService.query.filter_by(type=type).all():
-        hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
-            hosting_service.id
-        )
-
-    # remove everything finished recently
-    max_age = 3600
-    ts_an_hour_ago = time.time() - max_age
-    crawlable_hosters = {}
-    for hoster_id, state in hoster_id_state.items():
-        created_ts_too_old = state["run_created_ts"] < ts_an_hour_ago
-        logger.debug(f"checking hoster {hoster_id}")
-        if not state["run_is_finished"] or created_ts_too_old:
-            logger.debug(f"hoster {hoster_id} would be crawlable...")
-            crawlable_hosters[hoster_id] = state
-
-    if not crawlable_hosters:
-        # everything up to date, nothing to do
-        logger.warning("no crawlable hosters!")
-        return None
-
-    # get the oldest one in crawlable_hosters
-    oldest_hoster_id, oldest_hoster_state = min(
-        crawlable_hosters.items(),
-        key=lambda d: d[1].get(
-            "run_created_ts",
-        ),
-    )
-    logger.debug(f"making block for hoster {oldest_hoster_id}:")
-    logger.debug(f"state {oldest_hoster_state}:")
-    return _get_block(oldest_hoster_id)
-
-
 @api.route("/hosters/<type>/loadbalanced_block")
 def get_loadbalanced_block(type: str):
-    block_dict = _get_loadbalanced_block(type)
+    block_dict = get_loadbalanced_block_for_crawler(type)
     if not block_dict:
-        # todo
-        # make sleep block?
-        return jsonify({}), 200
+        sleep_dict = {
+            "status": "sleep",
+            "retry_at": time.time() + 300,  # 5min from now
+        }
+        return jsonify(sleep_dict)
 
     return jsonify(block_dict)
 
 
 @api.route("/hosters/<hosting_service_id>/block")
 def get_block(hosting_service_id: int):
-    block_dict = _get_block(hosting_service_id)
+    block_dict = get_block_for_crawler(hosting_service_id)
     return jsonify(block_dict)
 
     """
