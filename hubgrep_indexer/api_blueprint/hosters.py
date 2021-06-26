@@ -1,9 +1,9 @@
 import time
+import datetime
 from flask import request
 from flask import jsonify
 
 import logging
-from typing import List
 
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.lib.block_helpers import (
@@ -144,7 +144,12 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         repo_dicts=repo_dicts,
     )
     if run_is_finished:
-        # todo: make export
-        pass
+        now = datetime.datetime.now()
+        date_str = now.strftime("%Y%m%d_%H%M")
+        export_filename = f"{hosting_service.hoster_name}_{date_str}.json.gz"
+        hosting_service.repo_class.export_json_gz(hosting_service_id, export_filename)
+        hosting_service.latest_export_json_gz = export_filename
+        db.session.add(hosting_service)
+        db.session.commit()
 
     return jsonify(dict(status="ok")), 200

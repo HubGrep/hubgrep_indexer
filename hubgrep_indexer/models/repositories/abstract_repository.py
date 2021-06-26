@@ -3,16 +3,23 @@ import json
 import tempfile
 from typing import BinaryIO
 import datetime
+from flask import current_app
+
 from hubgrep_indexer import db
+
+
+
+from pathlib import Path
 
 from sqlalchemy.ext.declarative import declared_attr
 
 
 class DateTimeEncoder(json.JSONEncoder):
-    # https://stackoverflow.com/a/12126976
     """
     json encoder that can dump datetimes
     """
+
+    # https://stackoverflow.com/a/12126976
     def default(self, obj):
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()
@@ -28,6 +35,7 @@ class StreamArray(list):
     IE. It converts it to a list without having to exhaust the generator
     and keep it's contents in memory.
     """
+
     # https://stackoverflow.com/a/45143995
     def __init__(self, generator):
         self.generator = generator
@@ -45,7 +53,6 @@ class StreamArray(list):
         be parsed
         """
         return self._len
-
 
 
 class Repository(db.Model):
@@ -79,10 +86,12 @@ class Repository(db.Model):
             yield repo.to_dict()
 
     @classmethod
-    def export_json_gz(cls, hosting_service_id, chunk_size=1000):
-        # todo: add gzip  https://stackoverflow.com/a/57758563
-        with gzip.open(f'/tmp/hoster_{hosting_service_id}.json.gz', 'wt', encoding='UTF-8') as zipfile:
-            large_generator_handle = cls._get_repo_list_chunks(hosting_service_id, chunk_size)
+    def export_json_gz(cls, hosting_service_id, filename, chunk_size=1000):
+        base_path = Path(current_app.config["RESULTS_PATH"])
+        with gzip.open(base_path.joinpath(filename), "wt", encoding="UTF-8") as zipfile:
+            large_generator_handle = cls._get_repo_list_chunks(
+                hosting_service_id, chunk_size
+            )
             stream_array = StreamArray(large_generator_handle)
             for chunk in DateTimeEncoder().iterencode(stream_array):
                 zipfile.write(chunk)
@@ -93,4 +102,3 @@ class Repository(db.Model):
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         raise NotImplementedError
-
