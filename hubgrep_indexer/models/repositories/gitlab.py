@@ -1,6 +1,8 @@
 from iso8601 import iso8601
 import logging
 from hubgrep_indexer import db
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
+from sqlalchemy import Index
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,9 @@ logger = logging.getLogger(__name__)
 """
 
 
-class GitlabRepository(db.Model):
+class GitlabRepository(Repository):
+    __tablename__ = "gitlab_repositories"
+    __table_args__ = (Index('repo_ident_index_gitlab', "id", "gitlab_id"), )
     id = db.Column(db.Integer, primary_key=True)
 
     hosting_service_id = db.Column(
@@ -77,11 +81,11 @@ class GitlabRepository(db.Model):
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GitlabRepository":
         user_name = d['namespace']['path']
         name = d['name']
+        gitlab_id = d['id']
 
         repo = cls.query.filter_by(
             hosting_service_id=hosting_service_id,
-            user_name=user_name,
-            name=name,
+            gitlab_id=gitlab_id
         ).first()
         if not update and not repo:
             raise Exception("repo not found!")
@@ -89,7 +93,7 @@ class GitlabRepository(db.Model):
             repo = cls()
 
         repo.hosting_service_id = hosting_service_id
-        repo.gitlab_id = d['id']
+        repo.gitlab_id = gitlab_id
         repo.name = name
         repo.user_name = user_name
         repo.description = d["description"]

@@ -4,6 +4,7 @@ from iso8601 import iso8601
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
+from sqlalchemy import Index
 """
     {'id': 2,
     'owner': {'id': 5,
@@ -40,6 +41,7 @@ from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 class GiteaRepository(Repository):
     __tablename__ = "gitea_repositories"
+    __table_args__ = (Index('repo_ident_index_gitea', "id", "gitea_id"), )
 
     gitea_id = db.Column(db.Integer)  # 2
     name = db.Column(db.String(200))  # "repo_name",
@@ -86,11 +88,11 @@ class GiteaRepository(Repository):
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         owner_username = d["owner"]["username"]
         name = d["name"]
+        gitea_id = d["id"]
 
         repo = cls.query.filter_by(
             hosting_service_id=hosting_service_id,
-            owner_username=owner_username,
-            name=name,
+            gitea_id=gitea_id
         ).first()
         if not update and not repo:
             raise Exception("repo not found!")
@@ -98,7 +100,7 @@ class GiteaRepository(Repository):
             repo = cls()
 
         repo.hosting_service_id = hosting_service_id
-        repo.gitea_id = d["id"]
+        repo.gitea_id = gitea_id
         repo.name = name
         repo.owner_username = owner_username
         repo.description = d["description"]

@@ -8,11 +8,13 @@ from hubgrep_indexer import db
 
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
+from sqlalchemy import Index
 logger = logging.getLogger(__name__)
 
 
 class GithubRepository(Repository):
     __tablename__ = "github_repositories"
+    __table_args__ = (Index('repo_ident_index_github', "id", "github_id"), )
 
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
@@ -61,11 +63,11 @@ class GithubRepository(Repository):
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GithubRepository":
         owner_login = d['owner']['login']
         name = d['name']
+        github_id = cls.github_id_from_base64(d['id'])
 
         repo = cls.query.filter_by(
             hosting_service_id=hosting_service_id,
-            owner_login=owner_login,
-            name=name,
+            github_id=github_id
         ).first()
         if not update and not repo:
             raise Exception("repo not found!")
@@ -73,7 +75,7 @@ class GithubRepository(Repository):
             repo = cls()
 
         repo.hosting_service_id = hosting_service_id
-        repo.github_id = repo.github_id_from_base64(d['id'])
+        repo.github_id = github_id
         repo.name = name
         repo.homepage_url = d['homepageUrl']
         repo.url = d['url']
