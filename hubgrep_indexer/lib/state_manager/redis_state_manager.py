@@ -15,7 +15,6 @@ class RedisStateManager(AbstractStateManager):
         self.redis = redis.from_url("redis://localhost")
 
         self.run_created_ts_key = "run_created_ts"
-        self.run_finished_ts_key = "run_finished_ts"
         self.block_map_key = "blocks"
         self.highest_block_repo_id_key = "highest_block_repo_id"
         self.highest_confirmed_repo_id_key = "highest_confirmed_repo_id"
