@@ -58,14 +58,35 @@ class TestLocalStateManager:
     def test_finish_block(self, state_manager: AbstractStateManager):
         self.test_delete_block(state_manager=state_manager)
 
+    def test_finish_run(self, state_manager: AbstractStateManager):
+        created_ts = 11
+        highest_confirmed_id = 40
+        highest_block_id = 100
+        state_manager.set_highest_block_repo_id(HOSTER_PREFIX, highest_block_id)
+        state_manager.set_highest_confirmed_repo_id(HOSTER_PREFIX, highest_confirmed_id)
+        state_manager.set_run_created_ts(HOSTER_PREFIX, created_ts)
+        # False is implied
+        # state_manager.set_run_is_finished(HOSTER_PREFIX, False)
+
+        state_manager.finish_run(HOSTER_PREFIX)
+
+        assert state_manager.get_highest_block_repo_id(HOSTER_PREFIX) == highest_block_id
+        assert state_manager.get_highest_confirmed_repo_id(HOSTER_PREFIX) == highest_confirmed_id
+        assert state_manager.get_run_created_ts(HOSTER_PREFIX) == created_ts
+        assert state_manager.get_run_is_finished(HOSTER_PREFIX)
+
     def test_run_created_ts(self, state_manager: AbstractStateManager):
+        # create a ts for "now"
+        state_manager.set_run_created_ts(HOSTER_PREFIX)
         initial_run_created_ts = state_manager.get_run_created_ts(
             hoster_prefix=HOSTER_PREFIX)
-        state_manager.reset(hoster_prefix=HOSTER_PREFIX)
+
+        # create another timestamp
+        state_manager.set_run_created_ts(HOSTER_PREFIX, timestamp=11)
         second_run_created_ts = state_manager.get_run_created_ts(
             hoster_prefix=HOSTER_PREFIX)
         assert initial_run_created_ts
-        assert second_run_created_ts
+        assert second_run_created_ts == 11
         assert initial_run_created_ts != second_run_created_ts
 
     def test_empty_results_counter(self, state_manager: AbstractStateManager):

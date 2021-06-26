@@ -33,6 +33,9 @@ def init_logging(loglevel='info'):
             },
             'urllib3': {
                 'level': 'CRITICAL',
+            },
+            'redislite': {
+                'level': 'CRITICAL',
             }
         }
     })
