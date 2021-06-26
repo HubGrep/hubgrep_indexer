@@ -92,6 +92,12 @@ def get_loadbalanced_block(type: str):
 @api.route("/hosters/<hosting_service_id>/block")
 def get_block(hosting_service_id: int):
     block_dict = get_block_for_crawler(hosting_service_id)
+    if not block_dict:
+        sleep_dict = {
+            "status": "sleep",
+            "retry_at": time.time() + 300,  # 5min from now
+        }
+        return jsonify(sleep_dict)
     return jsonify(block_dict)
 
     """

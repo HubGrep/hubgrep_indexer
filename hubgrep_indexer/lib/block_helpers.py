@@ -12,10 +12,20 @@ from flask import url_for
 from hubgrep_indexer import state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
 
+from hubgrep_indexer.constants import MAX_RUN_AGE
+
 logger = logging.getLogger(__name__)
 
 
-def get_block_for_crawler(hosting_service_id) -> Dict:
+def _state_is_too_old(state):
+    ts_an_hour_ago = time.time() - MAX_RUN_AGE
+    created_ts_too_old = state["run_created_ts"] < ts_an_hour_ago
+    if not state["run_is_finished"] or created_ts_too_old:
+        return True
+    return False
+
+
+def _get_block_dict(hosting_service_id) -> Dict:
     timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
     if timed_out_block:
         block = timed_out_block
@@ -34,6 +44,13 @@ def get_block_for_crawler(hosting_service_id) -> Dict:
         _external=True,
     )
     return block_dict
+
+
+def get_block_for_crawler(hoster_id) -> Dict:
+    state = state_manager.get_state_dict(hoster_id)
+    if _state_is_too_old(state):
+        return _get_block_dict(hoster_id)
+    return None
 
 
 def get_loadbalanced_block_for_crawler(type) -> Dict:
@@ -58,13 +75,10 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
         )
 
     # remove everything finished recently
-    max_age = 300
-    ts_an_hour_ago = time.time() - max_age
     crawlable_hosters = {}
     for hoster_id, state in hoster_id_state.items():
-        created_ts_too_old = state["run_created_ts"] < ts_an_hour_ago
         logger.debug(f"checking hoster {hoster_id}")
-        if not state["run_is_finished"] or created_ts_too_old:
+        if _state_is_too_old(state):
             logger.debug(f"hoster {hoster_id} would be crawlable...")
             crawlable_hosters[hoster_id] = state
 
@@ -82,4 +96,4 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     )
     logger.debug(f"making block for hoster {oldest_hoster_id}:")
     logger.debug(f"state {oldest_hoster_state}:")
-    return get_block_for_crawler(oldest_hoster_id)
+    return _get_block_dict(oldest_hoster_id)
