@@ -26,6 +26,9 @@ from hubgrep_indexer.api_blueprint import api
 logger = logging.getLogger(__name__)
 
 # todo: needs_auth
+from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
+
+
 @api.route("/hosters", methods=["GET", "POST"])
 def hosters():
     if request.method == "GET":
@@ -135,8 +138,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     # get repo class
     RepoClasses = {
         HOST_TYPE_GITHUB: GithubRepository,
-        HOST_TYPE_GITEA: GiteaRepository
-        # HOST_TYPE_GITLAB: not implemented
+        HOST_TYPE_GITEA: GiteaRepository,
+        HOST_TYPE_GITLAB: GitlabRepository
     }
     RepoClass = RepoClasses.get(hosting_service.type)
     if not RepoClass:

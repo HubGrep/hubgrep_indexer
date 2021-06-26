@@ -16,8 +16,8 @@ then start the service and database
 
 run the initial migration in the container:
 
-    docker-compose run --rm service /bin/bash
-    flask cli init-db
+    docker-compose run --rm hubgrep_indexer /bin/bash
+    flask db upgrade
 
 also, you can import (and export) a list of hosting services:
 
@@ -28,7 +28,7 @@ also, you can import (and export) a list of hosting services:
 
 and maybe you want to have a container to run cli commands:
 
-    docker-compose run --rm service /bin/bash
+    docker-compose run --rm hubgrep_indexer /bin/bash
 
 in the container you have to run the db migrations
 
