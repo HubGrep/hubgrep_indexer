@@ -159,7 +159,7 @@ class TestHostStateHelpers:
                 repo_dicts=_repos,
             )
 
-        runs = 2
+        runs = 10
         run_created_ats = []
         for run_nr in range(runs):
             logger.info(f"run {run_nr}")

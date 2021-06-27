@@ -1,12 +1,11 @@
 import gzip
 import json
 import tempfile
-from typing import BinaryIO
+from typing import BinaryIO, Union
 import datetime
 from flask import current_app
 
 from hubgrep_indexer import db
-
 
 
 from pathlib import Path
@@ -73,9 +72,11 @@ class Repository(db.Model):
         return db.relationship("HostingService")
 
     @classmethod
-    def _get_repo_list_chunks(cls, hosting_service_id=None, chunk_size=1000):
+    def _yield_repo_list(cls, hosting_service_id=None, chunk_size=1000):
         """
         yield chunks of objects from the database
+
+        buffers <chunk_size> elements in ram, but yields one element
         """
         if hosting_service_id:
             repos_query = cls.query.filter_by(hosting_service_id=hosting_service_id)
@@ -86,10 +87,20 @@ class Repository(db.Model):
             yield repo.to_dict()
 
     @classmethod
-    def export_json_gz(cls, hosting_service_id, filename, chunk_size=1000):
-        base_path = Path(current_app.config["RESULTS_PATH"])
-        with gzip.open(base_path.joinpath(filename), "wt", encoding="UTF-8") as zipfile:
-            large_generator_handle = cls._get_repo_list_chunks(
+    def export_json_gz(
+        cls,
+        hosting_service_id,
+        filename,
+        results_base_path: Union[Path, str] = None,
+        chunk_size=1000,
+    ):
+        if not results_base_path:
+            results_base_path = current_app.config["RESULTS_PATH"]
+        results_base_path = Path(results_base_path)
+        with gzip.open(
+            results_base_path.joinpath(filename), "wt", encoding="UTF-8"
+        ) as zipfile:
+            large_generator_handle = cls._yield_repo_list(
                 hosting_service_id, chunk_size
             )
             stream_array = StreamArray(large_generator_handle)

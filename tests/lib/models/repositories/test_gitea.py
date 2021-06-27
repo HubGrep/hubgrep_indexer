@@ -57,7 +57,7 @@ gitea_results = [
         "default_branch": "master",
         "created_at": "2018-01-25T18:52:35Z",
         "updated_at": "2019-05-20T18:55:46Z",
-    }
+    },
 ]
 
 
@@ -79,40 +79,34 @@ class TestGiteaRepository:
             db.session.add(repo_1)
             db.session.commit()
 
-            generator = GiteaRepository._get_repo_list_chunks(chunk_size=1)
-            chunk = next(generator)
-            assert len(chunk) == 1
-            assert chunk[0].hosting_service_id == hosting_service.id
-            assert chunk[0].id == repo_0.id
-            assert chunk[0].gitea_id == repo_0.gitea_id
+            generator = GiteaRepository._yield_repo_list(chunk_size=1)
+            item = next(generator)
+            print(item)
+            assert item['hosting_service_id'] == hosting_service.id
+            item_1_id = item["gitea_id"]
 
-            chunk = next(generator)
-            assert chunk[0].id == repo_1.id
+            item = next(generator)
+            item_2_id = item["gitea_id"]
+            assert item_1_id != item_2_id
 
             # iterator ends after two repos
             with pytest.raises(StopIteration):
-                chunk = next(generator)
-
-            # with chunk_size=2, we should have only one iteration
-            generator = GiteaRepository._get_repo_list_chunks(chunk_size=2)
-            chunk = next(generator) 
-            with pytest.raises(StopIteration):
-                chunk = next(generator)
+                item = next(generator)
 
     def test_export_to_file(self, test_app, test_client, hosting_service):
         import tempfile
         import os
+        import shutil
+        import pathlib
+
         with test_app.app_context():
             repo = GiteaRepository.from_dict(hosting_service.id, gitea_results[0])
             db.session.add(repo)
             db.session.commit()
-            
-            with tempfile.TemporaryFile("wb") as f:
-                f.seek(0, os.SEEK_END)
-                assert f.tell() == 0
-                GiteaRepository.export_to_file(f, hosting_service.id)
-                f.seek(0, os.SEEK_END)
-                assert f.tell() != 0
-
-
-
+            filename = "testfile"
+            with tempfile.TemporaryDirectory() as tempdir:
+                GiteaRepository.export_json_gz(
+                    hosting_service.id, filename, results_base_path=tempdir
+                )
+                filepath = pathlib.Path(tempdir).joinpath(filename)
+                assert filepath.stat().st_size != 0

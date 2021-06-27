@@ -2,4 +2,4 @@ HOST_TYPE_GITHUB = "github"
 HOST_TYPE_GITEA = "gitea"
 HOST_TYPE_GITLAB = "gitlab"
 
-MAX_RUN_AGE = 60*60 * 24
+OLD_RUN_AGE = 60*60 * 24
