@@ -1,3 +1,9 @@
+"""
+All hoster repo classes are inherited from the AbstractRepository class defined here.
+
+This module contains helpers to export the repos as well.
+"""
+
 import gzip
 import json
 import tempfile
@@ -94,15 +100,23 @@ class Repository(db.Model):
         results_base_path: Union[Path, str] = None,
         chunk_size=1000,
     ):
+        """
+        write chunks from the database into a gzipped json file.
+
+        writes to <results_base_path>/<filename>
+        """
         if not results_base_path:
             results_base_path = current_app.config["RESULTS_PATH"]
         results_base_path = Path(results_base_path)
         with gzip.open(
             results_base_path.joinpath(filename), "wt", encoding="UTF-8"
         ) as zipfile:
+            # first call to get the generator
             large_generator_handle = cls._yield_repo_list(
                 hosting_service_id, chunk_size
             )
+            # serialize to json chunks, so we can write piece by piece,
+            # without using too much memory
             stream_array = StreamArray(large_generator_handle)
             for chunk in DateTimeEncoder().iterencode(stream_array):
                 zipfile.write(chunk)

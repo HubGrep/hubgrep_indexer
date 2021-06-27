@@ -63,27 +63,6 @@ class GiteaRepository(Repository):
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
 
-    export_keys = [
-        "gitea_id",
-        "name",
-        "owner_username",
-        "description",
-        "empty",
-        "private",
-        "fork",
-        "mirror",
-        "size",
-        "website",
-        "stars_count",
-        "forks_count",
-        "watchers_count",
-        "open_issues_count",
-        "default_branch",
-        "created_at",
-        "updated_at",
-        "pushed_at",
-    ]
-
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         owner_username = d["owner"]["username"]
