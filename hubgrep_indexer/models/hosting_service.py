@@ -4,6 +4,8 @@ import json
 from urllib.parse import urljoin
 import logging
 
+from sqlalchemy.engine import ResultProxy
+
 from flask import current_app
 from typing import BinaryIO
 from hubgrep_indexer.constants import (
@@ -64,6 +66,11 @@ class HostingService(db.Model):
         return re.split("//", self.landingpage_url)[1].rstrip("/")
 
     def to_dict(self, include_secrets=False):
+        """
+        return the dict for this hoster.
+
+        includes the result url, and things we might want to have in an api later.
+        """
         results_base_url = current_app.config["RESULTS_BASE_URL"]
         latest_export_json_gz_url = None
         if self.latest_export_json_gz:
@@ -84,6 +91,9 @@ class HostingService(db.Model):
         return d
 
     def crawler_dict(self):
+        """
+        return the dict which is sent to a crawler as part of the block
+        """
         d = dict(
             id=self.id,
             type=self.type,
@@ -102,19 +112,11 @@ class HostingService(db.Model):
 
         return hosting_service
 
-    def get_csv(self, buffer: BinaryIO):
-        fieldnames = ["type", "landingpage_url", "api_url"]
-        dict_writer = csv.DictWriter(
-            buffer,
-            fieldnames=fieldnames,
-            delimiter=";",
-        )
-        dict_writer.writeheader()
-        dict_writer.writerow(self.to_dict())
-        return buffer
-
     @property
     def repo_class(self):
+        """
+        return the repo class for this hoster
+        """
         RepoClasses = {
             HOST_TYPE_GITHUB: GithubRepository,
             HOST_TYPE_GITEA: GiteaRepository,
@@ -123,5 +125,10 @@ class HostingService(db.Model):
         return RepoClasses[self.type]
 
     @property
-    def repos(self):
+    def repos(self) -> ResultProxy:
+        """
+        get all repositories for this hoster.
+
+        call like hoster.repos.all() (or whatever you want to do with it)
+        """
         return self.repo_class.query.filter_by(hosting_service=self)
