@@ -237,7 +237,7 @@ class LocalStateManager(AbstractStateManager):
         self.run_created_timestamps = {}
 
         # bools, if the run, started at created_at is finished
-        self.run_is_finished = False
+        self.run_is_finished = {}
 
     def push_new_block(self, hoster_prefix, block: Block) -> None:
         if not self.blocks.get(hoster_prefix, False):
