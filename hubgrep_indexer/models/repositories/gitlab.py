@@ -1,5 +1,7 @@
 from iso8601 import iso8601
 import logging
+
+from typing import Dict
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from sqlalchemy import Index
@@ -40,12 +42,6 @@ logger = logging.getLogger(__name__)
 class GitlabRepository(Repository):
     __tablename__ = "gitlab_repositories"
     __table_args__ = (Index('repo_ident_index_gitlab', "id", "gitlab_id"), )
-    id = db.Column(db.Integer, primary_key=True)
-
-    hosting_service_id = db.Column(
-        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
-    )
-    hosting_service = db.relationship("HostingService")
 
     gitlab_id = db.Column(db.Integer)  # 'id': 1241825,
     description = db.Column(db.Text)  # 'description': 'Pacote LaTeXe para produção de monografias, dissertações e teses',
@@ -111,4 +107,26 @@ class GitlabRepository(Repository):
         repo.forks_count = d["forks_count"]
         repo.star_count = d["star_count"]
 
+        return repo
+
+    def to_dict(self) -> Dict[str, str]:
+        repo = dict()
+        repo["hosting_service_id"] = self.hosting_service_id
+        repo["gitlab_id"] = self.gitlab_id
+        repo["name"] = self.name
+        repo["user_name"] = self.user_name
+        repo["description"] = self.description
+        repo["name_with_namespace"] = self.name_with_namespace
+        repo["path"] = self.path
+        repo["path_with_namespace"] = self.path_with_namespace
+        repo["created_at"] = self.created_at
+        repo["last_activity_at"] = self.last_activity_at
+        repo["default_branch"] = self.default_branch
+        repo["ssh_url_to_repo"] = self.ssh_url_to_repo
+        repo["http_url_to_repo"] = self.http_url_to_repo
+        repo["web_url"] = self.web_url
+        repo["readme_url"] = self.readme_url
+        repo["avatar_url"] = self.avatar_url
+        repo["forks_count"] = self.forks_count
+        repo["star_count"] = self.star_count
         return repo

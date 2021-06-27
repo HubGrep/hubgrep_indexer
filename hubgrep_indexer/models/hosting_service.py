@@ -77,6 +77,7 @@ class HostingService(db.Model):
             api_url=self.api_url,
             hoster_name=self.hoster_name,
             latest_export_json_gz=latest_export_json_gz_url,
+            num_repos=self.repos.count()
         )
         if include_secrets:
             d["api_key"] = self.api_key
@@ -123,4 +124,4 @@ class HostingService(db.Model):
 
     @property
     def repos(self):
-        return self.repo_class.query.filter_by(hoster=self)
+        return self.repo_class.query.filter_by(hosting_service=self)
