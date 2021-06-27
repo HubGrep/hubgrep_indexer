@@ -1,16 +1,29 @@
+import time
 from flask import request
-from flask import url_for
 from flask import jsonify
+
+import logging
+from typing import List
 
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.github import GithubRepository
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
-from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
+from hubgrep_indexer.constants import (
+    HOST_TYPE_GITHUB,
+    HOST_TYPE_GITEA,
+    HOST_TYPE_GITLAB,
+)
+from hubgrep_indexer.lib.block_helpers import (
+    get_block_for_crawler,
+    get_loadbalanced_block_for_crawler,
+)
+
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer import db, state_manager
 
 from hubgrep_indexer.api_blueprint import api
 
+logger = logging.getLogger(__name__)
 
 # todo: needs_auth
 from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
@@ -39,21 +52,6 @@ def hosters():
         db.session.commit()
         return jsonify(hosting_service.crawler_dict())
 
-    [
-        {
-            # is this our PK?
-            "api_url": "https://...",
-            # config for this hoster in hubgrep_search
-            # api key isnt needed for local search, and shouldnt be handed out
-            "landingpage_url": "https://...",
-            "label": "some_label",
-            "type": "gitea",
-            # gzipped csv export
-            "export_url": "https://path/to/export_some_label_2021-01-01.csv.gz",
-            "export_date": "2021-01-01...",
-        },
-    ]
-
 
 @api.route("/hosters/<hosting_service_id>/state")
 def state(hosting_service_id: int):
@@ -81,21 +79,28 @@ def state(hosting_service_id: int):
     """
 
 
+@api.route("/hosters/<type>/loadbalanced_block")
+def get_loadbalanced_block(type: str):
+    block_dict = get_loadbalanced_block_for_crawler(type)
+    if not block_dict:
+        sleep_dict = {
+            "status": "sleep",
+            "retry_at": time.time() + 300,  # 5min from now
+        }
+        return jsonify(sleep_dict)
+
+    return jsonify(block_dict)
+
+
 @api.route("/hosters/<hosting_service_id>/block")
 def get_block(hosting_service_id: int):
-    timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
-    if timed_out_block:
-        block = timed_out_block
-    else:
-        block = state_manager.get_next_block(hosting_service_id)
-    block_dict = block.to_dict()
-
-    hosting_service = HostingService.query.get(hosting_service_id)
-    block_dict["crawler"] = hosting_service.crawler_dict()
-    block_dict["callback_url"] = url_for(f'api.add_repos',
-                                         hosting_service_id=hosting_service_id,
-                                         block_uid=block_dict["uid"],
-                                         _external=True)
+    block_dict = get_block_for_crawler(hosting_service_id)
+    if not block_dict:
+        sleep_dict = {
+            "status": "sleep",
+            "retry_at": time.time() + 300,  # 5min from now
+        }
+        return jsonify(sleep_dict)
     return jsonify(block_dict)
 
     """
@@ -127,8 +132,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     :param hosting_service_id: int - the registered hosting_service these repos belong to.
     :param block_uid: (optional) int - if this arg is missing the repos will be added without affecting internal state.
     """
-    hosting_service: HostingService = HostingService.query.get(
-        hosting_service_id)
+    hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
 
     # get repo class
@@ -148,9 +152,14 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     db.session.commit()
 
     state_helper = get_state_helper(hosting_service.type)
-    state_helper.resolve_state(hosting_service_id=hosting_service_id,
-                               state_manager=state_manager,
-                               block_uid=block_uid,
-                               repo_dicts=repo_dicts)
+    run_is_finished = state_helper.resolve_state(
+        hosting_service_id=hosting_service_id,
+        state_manager=state_manager,
+        block_uid=block_uid,
+        repo_dicts=repo_dicts,
+    )
+    if run_is_finished:
+        # todo: make export
+        pass
 
     return jsonify(dict(status="ok")), 200

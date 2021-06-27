@@ -14,7 +14,7 @@ class IStateHelper:
     def resolve_state(hosting_service_id: str,
                       state_manager: AbstractStateManager,
                       block_uid: str,
-                      repo_dicts: list):
+                      repo_dicts: list) -> bool:
         """
         Default implementation for resolving if we have consumed all
         repositories available, and its time to start over.
@@ -22,6 +22,8 @@ class IStateHelper:
         This assumes that we give out blocks based on pagination,
         and reaching the end of pagination means we reset the
         state and start over.
+
+        Returns state_manager.get_run_is_finished() (true if we reached end)
         """
         block = state_manager.get_blocks(
             hoster_prefix=hosting_service_id)[block_uid]
@@ -52,18 +54,23 @@ class IStateHelper:
         if has_reached_end:
             logger.info(
                 f'crawler reached end for hoster: {hosting_service_id}')
-            state_manager.reset(hoster_prefix=hosting_service_id)
+            state_manager.finish_run(hoster_prefix=hosting_service_id)
+            return state_manager.get_run_is_finished(hosting_service_id)
         elif has_too_many_empty:
             logger.info(
                 f'crawler reach max empty results for hoster: {hosting_service_id}')
-            state_manager.reset(hoster_prefix=hosting_service_id)
+            state_manager.finish_run(hoster_prefix=hosting_service_id)
+            return state_manager.get_run_is_finished(hosting_service_id)
         else:
+            # if we hit this branch, we are somewhere in the middle of the hoster.
+            # we just count up our confirmed ids and go on
             if isinstance(block.ids, list) and len(block.ids) > 0:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
             state_manager.set_highest_confirmed_repo_id(
                 hoster_prefix=hosting_service_id, repo_id=repo_id)
+            return state_manager.get_run_is_finished(hosting_service_id)
 
     @staticmethod
     def has_too_many_consecutive_empty_results(
