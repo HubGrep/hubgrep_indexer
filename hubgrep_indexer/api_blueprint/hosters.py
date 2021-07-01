@@ -1,23 +1,17 @@
 import time
+import datetime
 from flask import request
 from flask import jsonify
 
 import logging
-from typing import List
 
 from hubgrep_indexer.models.hosting_service import HostingService
-from hubgrep_indexer.models.repositories.github import GithubRepository
-from hubgrep_indexer.models.repositories.gitea import GiteaRepository
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-    HOST_TYPE_GITEA,
-    HOST_TYPE_GITLAB,
-)
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from hubgrep_indexer.lib.block_helpers import (
     get_block_for_crawler,
     get_loadbalanced_block_for_crawler,
 )
-
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer import db, state_manager
 
@@ -25,10 +19,8 @@ from hubgrep_indexer.api_blueprint import api
 
 logger = logging.getLogger(__name__)
 
+
 # todo: needs_auth
-from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
-
-
 @api.route("/hosters", methods=["GET", "POST"])
 def hosters():
     if request.method == "GET":
@@ -53,7 +45,7 @@ def hosters():
         return jsonify(hosting_service.crawler_dict())
 
 
-@api.route("/hosters/<hosting_service_id>/state")
+@api.route("/hosters/<hosting_service_id>/state", methods=['GET'])
 def state(hosting_service_id: int):
     blocks = state_manager.get_blocks(hosting_service_id)
     block_dicts = [block.to_dict() for block in blocks.values()]
@@ -82,26 +74,22 @@ def state(hosting_service_id: int):
 @api.route("/hosters/<type>/loadbalanced_block")
 def get_loadbalanced_block(type: str):
     block_dict = get_loadbalanced_block_for_crawler(type)
-    if not block_dict:
-        sleep_dict = {
-            "status": "sleep",
-            "retry_at": time.time() + 300,  # 5min from now
-        }
-        return jsonify(sleep_dict)
 
-    return jsonify(block_dict)
+    if not block_dict:
+        return jsonify(Block.get_sleep_dict())
+    else:
+        return jsonify(block_dict)
 
 
 @api.route("/hosters/<hosting_service_id>/block")
+@api.route("/hosters/<hosting_service_id>/block", methods=['GET'])
 def get_block(hosting_service_id: int):
     block_dict = get_block_for_crawler(hosting_service_id)
+
     if not block_dict:
-        sleep_dict = {
-            "status": "sleep",
-            "retry_at": time.time() + 300,  # 5min from now
-        }
-        return jsonify(sleep_dict)
-    return jsonify(block_dict)
+        return jsonify(Block.get_sleep_dict())
+    else:
+        return jsonify(block_dict)
 
     """
     return dict(
@@ -115,9 +103,9 @@ def get_block(hosting_service_id: int):
         end=1000,
     )
 
-    # or, noting todo:
+    # or, nothing to do:
     return {
-        "status": "no_crawl",  # (not exactly so, but something explicit)
+        "status": "sleep",
         "retry_at": 1234567,
     }
     """
@@ -135,19 +123,13 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
 
-    # get repo class
-    RepoClasses = {
-        HOST_TYPE_GITHUB: GithubRepository,
-        HOST_TYPE_GITEA: GiteaRepository,
-        HOST_TYPE_GITLAB: GitlabRepository
-    }
-    RepoClass = RepoClasses.get(hosting_service.type)
-    if not RepoClass:
+    if not hosting_service.repo_class:
         return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
     for repo_dict in repo_dicts:
-        r = RepoClass.from_dict(hosting_service_id, repo_dict)
+        repo_class = Repository.repo_class_for_type(hosting_service.type)
+        r = repo_class.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
 
@@ -159,7 +141,12 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         repo_dicts=repo_dicts,
     )
     if run_is_finished:
-        # todo: make export
-        pass
+        now = datetime.datetime.now()
+        date_str = now.strftime("%Y%m%d_%H%M")
+        export_filename = f"{hosting_service.hoster_name}_{date_str}.json.gz"
+        hosting_service.repo_class.export_json_gz(hosting_service_id, export_filename)
+        hosting_service.latest_export_json_gz = export_filename
+        db.session.add(hosting_service)
+        db.session.commit()
 
     return jsonify(dict(status="ok")), 200

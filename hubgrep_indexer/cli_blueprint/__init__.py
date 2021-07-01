@@ -39,3 +39,11 @@ def import_hosters(json_path):
                     logger.info(f"skipping {hosting_service.api_url} (already added)")
             except Exception as e:
                 logger.exception(e)
+
+
+@cli_bp.cli.command()
+@click.argument("hoster_url")
+@click.argument("json_path", type=click.Path())
+def export_repos(hoster_url, json_path):
+    hosting_service = HostingService.query.filter_by(api_url=hoster_url).first()
+    hosting_service.repo_class.export_json_gz(hosting_service.id)

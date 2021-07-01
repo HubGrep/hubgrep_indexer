@@ -1,8 +1,10 @@
 import time
-
+import logging
 from .abstract_state_manager import AbstractStateManager, Block
 
 import redis
+
+logger = logging.getLogger(__name__)
 
 
 class RedisStateManager(AbstractStateManager):
@@ -81,6 +83,16 @@ class RedisStateManager(AbstractStateManager):
     def set_run_is_finished(self, hoster_prefix, is_finished: bool):
         redis_key = f"{hoster_prefix}:{self.run_is_finished_key}"
         self.redis.set(redis_key, int(is_finished))
+
+    def update_block(self, hoster_prefix: str, block: Block):
+        """Store changes applied to a block."""
+        redis_key = f"{hoster_prefix}:{self.block_map_key}"
+        old_block = self.redis.hget(redis_key, block.uid)
+        if old_block:
+            # only update existing blocks
+            self.redis.hset(redis_key, block.uid, block.to_json())
+        else:
+            logger.info(f"no action taken - attempted to update non-existing block state, uid: {block.uid}")
 
     def _delete_block(self, hoster_prefix, block_uid):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"

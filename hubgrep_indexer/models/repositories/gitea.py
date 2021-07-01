@@ -1,7 +1,10 @@
+from typing import Dict
 from iso8601 import iso8601
 
 from hubgrep_indexer import db
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
+from sqlalchemy import Index
 """
     {'id': 2,
     'owner': {'id': 5,
@@ -36,13 +39,9 @@ from hubgrep_indexer import db
     """
 
 
-class GiteaRepository(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-
-    hosting_service_id = db.Column(
-        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
-    )
-    hosting_service = db.relationship("HostingService")
+class GiteaRepository(Repository):
+    __tablename__ = "gitea_repositories"
+    __table_args__ = (Index('repo_ident_index_gitea', "id", "gitea_id"), )
 
     gitea_id = db.Column(db.Integer)  # 2
     name = db.Column(db.String(200))  # "repo_name",
@@ -68,11 +67,11 @@ class GiteaRepository(db.Model):
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         owner_username = d["owner"]["username"]
         name = d["name"]
+        gitea_id = d["id"]
 
         repo = cls.query.filter_by(
             hosting_service_id=hosting_service_id,
-            owner_username=owner_username,
-            name=name,
+            gitea_id=gitea_id
         ).first()
         if not update and not repo:
             raise Exception("repo not found!")
@@ -80,7 +79,7 @@ class GiteaRepository(db.Model):
             repo = cls()
 
         repo.hosting_service_id = hosting_service_id
-        repo.gitea_id = d["id"]
+        repo.gitea_id = gitea_id
         repo.name = name
         repo.owner_username = owner_username
         repo.description = d["description"]
@@ -99,3 +98,26 @@ class GiteaRepository(db.Model):
         repo.updated_at = iso8601.parse_date(d["updated_at"])
 
         return repo
+
+    def to_dict(self) -> Dict[str, str]:
+        repo = dict()
+        repo["hosting_service_id"] = self.hosting_service_id
+        repo["gitea_id"] = self.id
+        repo["name"] = self.name
+        repo["owner_username"] = self.owner_username
+        repo["description"] = self.description
+        repo["empty"] = self.empty
+        repo["private"] = self.private
+        repo["fork"] = self.fork
+        repo["mirror"] = self.mirror
+        repo["size"] = self.size
+        repo["website"] = self.website
+        repo["stars_count"] = self.stars_count
+        repo["forks_count"] = self.forks_count
+        repo["watchers_count"] = self.watchers_count
+        repo["open_issues_count"] = self.open_issues_count
+        repo["default_branch"] = self.default_branch
+        repo["created_at"] = self.created_at
+        repo["updated_at"] = self.updated_at
+        return repo
+
