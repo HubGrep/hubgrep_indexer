@@ -6,17 +6,20 @@ This module contains helpers to export the repos as well.
 
 import gzip
 import json
-import tempfile
-from typing import BinaryIO, Union
 import datetime
-from flask import current_app
-
-from hubgrep_indexer import db
-
-
+from typing import Union
 from pathlib import Path
 
+from flask import current_app
 from sqlalchemy.ext.declarative import declared_attr
+
+from hubgrep_indexer.constants import (
+    HOST_TYPE_GITHUB,
+    HOST_TYPE_GITEA,
+    HOST_TYPE_GITLAB,
+)
+
+from hubgrep_indexer import db
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -127,3 +130,17 @@ class Repository(db.Model):
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         raise NotImplementedError
+
+    @classmethod
+    def repo_class_for_type(type: str) -> 'Repository':
+        # prevent circular import
+        from hubgrep_indexer.models.repositories.gitea import GiteaRepository
+        from hubgrep_indexer.models.repositories.github import GithubRepository
+        from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
+
+        RepoClasses = {
+            HOST_TYPE_GITHUB: GithubRepository,
+            HOST_TYPE_GITEA: GiteaRepository,
+            HOST_TYPE_GITLAB: GitlabRepository,
+        }
+        return RepoClasses[type]

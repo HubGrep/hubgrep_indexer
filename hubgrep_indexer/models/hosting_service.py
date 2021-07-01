@@ -6,17 +6,9 @@ import logging
 from sqlalchemy.engine import ResultProxy
 
 from flask import current_app
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-    HOST_TYPE_GITEA,
-    HOST_TYPE_GITLAB,
-)
-from hubgrep_indexer.models.repositories.gitea import GiteaRepository
-from hubgrep_indexer.models.repositories.github import GithubRepository
-from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
-
 
 from hubgrep_indexer import db
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 
 logger = logging.getLogger(__name__)
@@ -110,22 +102,11 @@ class HostingService(db.Model):
         return hosting_service
 
     @property
-    def repo_class(self):
-        """
-        return the repo class for this hoster
-        """
-        RepoClasses = {
-            HOST_TYPE_GITHUB: GithubRepository,
-            HOST_TYPE_GITEA: GiteaRepository,
-            HOST_TYPE_GITLAB: GitlabRepository,
-        }
-        return RepoClasses[self.type]
-
-    @property
     def repos(self) -> ResultProxy:
         """
         get all repositories for this hoster.
 
         call like hoster.repos.all() (or whatever you want to do with it)
         """
-        return self.repo_class.query.filter_by(hosting_service=self)
+        repo_class = Repository.repo_class_for_type(self.type)
+        return repo_class.query.filter_by(hosting_service=self)
