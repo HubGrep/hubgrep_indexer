@@ -88,18 +88,7 @@ class HostingService(db.Model):
         )
         if include_secrets:
             d["api_key"] = self.api_key
-        return d
-
-    def crawler_dict(self):
-        """
-        return the dict which is sent to a crawler as part of the block
-        """
-        d = dict(
-            id=self.id,
-            type=self.type,
-            api_url=self.api_url,
-            request_headers=self.get_request_headers(),
-        )
+            d["request_headers"] = self.get_request_headers()
         return d
 
     @classmethod

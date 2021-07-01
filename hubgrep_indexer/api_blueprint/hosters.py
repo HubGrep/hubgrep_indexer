@@ -25,7 +25,7 @@ def hosters():
     if request.method == "GET":
         hosting_services = []
         for hosting_service in HostingService.query.all():
-            hosting_services.append(hosting_service.crawler_dict())
+            hosting_services.append(hosting_service.to_dict(include_secrets=True))
         return jsonify(hosting_services)
 
     elif request.method == "POST":
@@ -153,3 +153,5 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         db.session.commit()
 
     return jsonify(dict(status="ok")), 200
+
+

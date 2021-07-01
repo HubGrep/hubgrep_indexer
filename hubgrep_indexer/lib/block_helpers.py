@@ -36,7 +36,7 @@ def _get_block_dict(hosting_service_id) -> Dict:
     hosting_service = HostingService.query.get(hosting_service_id)
     logger.info(f"getting block for {hosting_service}")
 
-    block_dict["crawler"] = hosting_service.crawler_dict()
+    block_dict["crawler"] = hosting_service.to_dict(include_secrets=True)
     block_dict["callback_url"] = url_for(
         "api.add_repos",
         hosting_service_id=hosting_service.id,
