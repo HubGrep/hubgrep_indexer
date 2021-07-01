@@ -6,6 +6,7 @@ from flask import jsonify
 import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from hubgrep_indexer.lib.block_helpers import (
     get_block_for_crawler,
     get_loadbalanced_block_for_crawler,
@@ -132,7 +133,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     # add repos to the db :)
     for repo_dict in repo_dicts:
-        r = hosting_service.repo_class.from_dict(hosting_service_id, repo_dict)
+        repo_class = Repository.repo_class_for_type(self.type)
+        r = repo_class.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
 
