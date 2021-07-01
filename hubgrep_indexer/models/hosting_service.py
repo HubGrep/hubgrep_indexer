@@ -1,13 +1,11 @@
-import csv
 import re
-import json
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 import logging
 
 from sqlalchemy.engine import ResultProxy
 
 from flask import current_app
-from typing import BinaryIO
 from hubgrep_indexer.constants import (
     HOST_TYPE_GITHUB,
     HOST_TYPE_GITEA,
@@ -41,7 +39,6 @@ class HostingService(db.Model):
 
     @property
     def hoster_name(self):
-        from urllib.parse import urlparse
 
         return urlparse(self.landingpage_url).netloc
 
