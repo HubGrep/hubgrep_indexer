@@ -278,6 +278,8 @@ class LocalStateManager(AbstractStateManager):
         old_block = self.get_block(hoster_prefix=hoster_prefix, block_uid=block.uid)
         if old_block:
             self.blocks[hoster_prefix][block.uid] = block
+        else:
+            logger.info(f"no action taken - attempted to update non-existing block state, uid: {block.uid}")
 
     def _delete_block(self, hoster_prefix, block_uid: str) -> Block:
         hoster_blocks = self.blocks[hoster_prefix]

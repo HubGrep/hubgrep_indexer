@@ -1,8 +1,10 @@
 import time
-
+import logging
 from .abstract_state_manager import AbstractStateManager, Block
 
 import redis
+
+logger = logging.getLogger(__name__)
 
 
 class RedisStateManager(AbstractStateManager):
@@ -89,6 +91,8 @@ class RedisStateManager(AbstractStateManager):
         if old_block:
             # only update existing blocks
             self.redis.hset(redis_key, block.uid, block.to_json())
+        else:
+            logger.info(f"no action taken - attempted to update non-existing block state, uid: {block.uid}")
 
     def _delete_block(self, hoster_prefix, block_uid):
         redis_key = f"{hoster_prefix}:{self.block_map_key}"

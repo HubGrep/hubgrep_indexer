@@ -32,12 +32,14 @@ class IStateHelper:
 
         if not block:
             # Block has already been deleted from the previous run, no state changes
+            logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
             return None
         else:
             run_created_ts = state_manager.get_run_created_ts(
                 hoster_prefix=hosting_service_id)
             is_block_from_old_run = block.run_created_ts != run_created_ts
             if is_block_from_old_run:
+                logger.info(f"skipping state update for outdated block, uid: {block_uid}")
                 # this Block belongs to an old run, so we avoid touching any state for it
                 return None
 
