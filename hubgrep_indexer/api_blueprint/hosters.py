@@ -10,7 +10,7 @@ from hubgrep_indexer.lib.block_helpers import (
     get_block_for_crawler,
     get_loadbalanced_block_for_crawler,
 )
-
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer import db, state_manager
 
@@ -73,27 +73,22 @@ def state(hosting_service_id: int):
 @api.route("/hosters/<type>/loadbalanced_block")
 def get_loadbalanced_block(type: str):
     block_dict = get_loadbalanced_block_for_crawler(type)
-    if not block_dict:
-        sleep_dict = {
-            "status": "sleep",
-            "retry_at": time.time() + 300,  # 5min from now
-        }
-        return jsonify(sleep_dict)
 
-    return jsonify(block_dict)
+    if not block_dict:
+        return jsonify(Block.get_sleep_dict())
+    else:
+        return jsonify(block_dict)
 
 
 @api.route("/hosters/<hosting_service_id>/block")
 @api.route("/hosters/<hosting_service_id>/block", methods=['GET'])
 def get_block(hosting_service_id: int):
     block_dict = get_block_for_crawler(hosting_service_id)
+
     if not block_dict:
-        sleep_dict = {
-            "status": "sleep",
-            "retry_at": time.time() + 300,  # 5min from now
-        }
-        return jsonify(sleep_dict)
-    return jsonify(block_dict)
+        return jsonify(Block.get_sleep_dict())
+    else:
+        return jsonify(block_dict)
 
     """
     return dict(
@@ -107,9 +102,9 @@ def get_block(hosting_service_id: int):
         end=1000,
     )
 
-    # or, noting todo:
+    # or, nothing to do:
     return {
-        "status": "no_crawl",  # (not exactly so, but something explicit)
+        "status": "sleep",
         "retry_at": 1234567,
     }
     """

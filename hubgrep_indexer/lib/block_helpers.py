@@ -28,6 +28,7 @@ def _state_is_too_old(state):
 def _get_block_dict(hosting_service_id) -> Dict:
     timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
     if timed_out_block:
+        logger.debug(f"re-attempting timed out block, uid: {timed_out_block.uid}")
         block = timed_out_block
     else:
         block = state_manager.get_next_block(hosting_service_id)
@@ -94,6 +95,6 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
             "run_created_ts",
         ),
     )
-    logger.debug(f"making block for hoster {oldest_hoster_id}:")
+    logger.debug(f"creating block for hoster {oldest_hoster_id}:")
     logger.debug(f"state {oldest_hoster_state}:")
     return _get_block_dict(oldest_hoster_id)

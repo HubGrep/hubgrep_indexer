@@ -3,7 +3,7 @@ import time
 import uuid
 import logging
 
-from typing import Dict
+from typing import Dict, Union
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,13 @@ class Block:
     def to_json(self):
         d = self.to_dict()
         return json.dumps(d)
+
+    @classmethod
+    def get_sleep_dict(cls):
+        return {
+            "status": "sleep",
+            "retry_at": time.time() + 300,  # 5min from now
+        }
 
     def __repr__(self):
         # TODO new repr as we have either from/to_id and/or ids
@@ -136,6 +143,15 @@ class AbstractStateManager:
     def get_blocks(self, hoster_prefix: str) -> Dict[str, Block]:
         raise NotImplementedError
 
+    def get_block(self, hoster_prefix: str, block_uid: str) -> Block:
+        """Return an existing Block or None"""
+        blocks = self.get_blocks(hoster_prefix=hoster_prefix)
+        return blocks.get(block_uid, None)
+
+    def update_block(self, hoster_prefix: str, block: Block):
+        """Store changes applied to a block."""
+        raise NotImplementedError
+
     def finish_block(self, hoster_prefix: str, block_uid: str):
         """Cleanup after a block is considered completed."""
         return self._delete_block(hoster_prefix, block_uid)
@@ -200,7 +216,7 @@ class AbstractStateManager:
         self.set_highest_block_repo_id(hoster_prefix, block.to_id)
         return block
 
-    def get_timed_out_block(self, hoster_prefix: str, timestamp_now=None) -> Block:
+    def get_timed_out_block(self, hoster_prefix: str, timestamp_now=None) -> Union[Block, None]:
         """
         Try to get a block we didnt receive an answer for.
 
@@ -213,6 +229,8 @@ class AbstractStateManager:
         for uid, block in self.get_blocks(hoster_prefix).items():
             age = timestamp_now - block.attempts_at[-1]
             if age > self.block_timeout:
+                block.attempts_at.append(timestamp_now)
+                self.update_block(hoster_prefix=hoster_prefix, block=block)
                 return block
         return None
 
@@ -254,6 +272,12 @@ class LocalStateManager(AbstractStateManager):
         if not self.current_highest_repo_ids.get(hoster_prefix, False):
             self.current_highest_repo_ids[hoster_prefix] = 0
         return self.current_highest_repo_ids[hoster_prefix]
+
+    def update_block(self, hoster_prefix: str, block: Block):
+        """Store changes applied to a block."""
+        old_block = self.get_block(hoster_prefix=hoster_prefix, block_uid=block.uid)
+        if old_block:
+            self.blocks[hoster_prefix][block.uid] = block
 
     def _delete_block(self, hoster_prefix, block_uid: str) -> Block:
         hoster_blocks = self.blocks[hoster_prefix]
