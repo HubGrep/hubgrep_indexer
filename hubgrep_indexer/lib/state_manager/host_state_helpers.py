@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager, Block
@@ -14,7 +15,7 @@ class IStateHelper:
     def resolve_state(hosting_service_id: str,
                       state_manager: AbstractStateManager,
                       block_uid: str,
-                      repo_dicts: list) -> bool:
+                      repo_dicts: list) -> Union[bool, None]:
         """
         Default implementation for resolving if we have consumed all
         repositories available, and its time to start over.
@@ -23,18 +24,25 @@ class IStateHelper:
         and reaching the end of pagination means we reset the
         state and start over.
 
-        Returns state_manager.get_run_is_finished() (true if we reached end)
+        Returns state_manager.get_run_is_finished() OR None
+        - true if we reached end, None if block is unrelated to the current run
         """
-        block = state_manager.get_blocks(
-            hoster_prefix=hosting_service_id)[block_uid]
+        block = state_manager.get_block(
+            hoster_prefix=hosting_service_id, block_uid=block_uid)
 
-        run_created_ts = state_manager.get_run_created_ts(
-            hoster_prefix=hosting_service_id)
-        block_is_from_old_run = block.run_created_ts != run_created_ts
-        if block_is_from_old_run:
-            # this block belongs to an old run,
-            # so we avoid touching any state for it
-            return
+        if not block:
+            # Block has already been deleted from the previous run, no state changes
+            logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
+            return None
+        else:
+            run_created_ts = state_manager.get_run_created_ts(
+                hoster_prefix=hosting_service_id)
+            is_block_from_old_run = block.run_created_ts != run_created_ts
+            if is_block_from_old_run:
+                logger.info(f"skipping state update for outdated block, uid: {block_uid}")
+                # this Block belongs to an old run, so we avoid touching any state for it
+                return None
+
         state_manager.finish_block(
             hoster_prefix=hosting_service_id, block_uid=block_uid)
 
