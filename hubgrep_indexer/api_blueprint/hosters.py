@@ -128,7 +128,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     # add repos to the db :)
     for repo_dict in repo_dicts:
-        repo_class = Repository.repo_class_for_type(self.type)
+        repo_class = Repository.repo_class_for_type(hosting_service.type)
         r = repo_class.from_dict(hosting_service_id, repo_dict)
         db.session.add(r)
     db.session.commit()
