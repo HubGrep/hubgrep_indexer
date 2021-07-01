@@ -46,6 +46,14 @@ class TestLocalStateManager:
 
         assert block.uid == timed_out_block.uid
 
+    def test_get_and_update_block(self, state_manager: AbstractStateManager):
+        old_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+        old_block.attempts_at.append("im an int timestamp, really!")
+        state_manager.update_block(hoster_prefix=HOSTER_PREFIX, block=old_block)
+        block = state_manager.get_block(hoster_prefix=HOSTER_PREFIX, block_uid=old_block.uid)
+
+        assert block.attempts_at[-1] == old_block.attempts_at[-1]
+
     def test_delete_block(self, state_manager: AbstractStateManager):
         block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
         assert len(state_manager.get_blocks(
