@@ -132,7 +132,7 @@ class Repository(db.Model):
         raise NotImplementedError
 
     @classmethod
-    def repo_class_for_type(type: str) -> 'Repository':
+    def repo_class_for_type(cls, type: str) -> 'Repository':
         # prevent circular import
         from hubgrep_indexer.models.repositories.gitea import GiteaRepository
         from hubgrep_indexer.models.repositories.github import GithubRepository

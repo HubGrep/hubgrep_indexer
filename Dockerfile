@@ -1,5 +1,8 @@
 FROM python:3.8-slim-buster
 
+# extra setup to compile psycopg2 if neccessary
+RUN apt-get update && apt-get install libpq-dev python-dev gcc build-essential -y
+
 WORKDIR /var/task
 
 RUN echo "PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '" >> /root/.bashrc

@@ -123,7 +123,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
 
-    if not hosting_service.repo_class:
+    repo_class = Repository.repo_class_for_type(hosting_service.type)
+    if not repo_class:
         return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
@@ -144,7 +145,10 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         now = datetime.datetime.now()
         date_str = now.strftime("%Y%m%d_%H%M")
         export_filename = f"{hosting_service.hoster_name}_{date_str}.json.gz"
-        hosting_service.repo_class.export_json_gz(hosting_service_id, export_filename)
+
+        repo_class = Repository.repo_class_for_type(hosting_service.type)
+        repo_class.export_json_gz(hosting_service_id, export_filename)
+
         hosting_service.latest_export_json_gz = export_filename
         db.session.add(hosting_service)
         db.session.commit()
