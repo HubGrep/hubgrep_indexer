@@ -1,0 +1,17 @@
+.idea/
+.vscode
+
+env/
+env_*/
+venv/
+
+*.pyc
+__pycache__/
+
+.git
+
+.gitignore
+
+.restic.conf
+.pytest_cache/
+.env
