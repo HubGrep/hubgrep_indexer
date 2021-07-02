@@ -9,7 +9,7 @@ from typing import Dict
 
 from flask import url_for
 
-from hubgrep_indexer import state_manager
+from hubgrep_indexer import get_state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
 
 from hubgrep_indexer.constants import OLD_RUN_AGE
@@ -26,12 +26,12 @@ def _state_is_too_old(state):
 
 
 def _get_block_dict(hosting_service_id) -> Dict:
-    timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
+    timed_out_block = get_state_manager().get_timed_out_block(hosting_service_id)
     if timed_out_block:
         logger.info(f"re-attempting timed out block, uid: {timed_out_block.uid}")
         block = timed_out_block
     else:
-        block = state_manager.get_next_block(hosting_service_id)
+        block = get_state_manager().get_next_block(hosting_service_id)
     block_dict = block.to_dict()
 
     hosting_service = HostingService.query.get(hosting_service_id)
@@ -48,7 +48,7 @@ def _get_block_dict(hosting_service_id) -> Dict:
 
 
 def get_block_for_crawler(hoster_id) -> Dict:
-    state = state_manager.get_state_dict(hoster_id)
+    state = get_state_manager().get_state_dict(hoster_id)
     if _state_is_too_old(state):
         return _get_block_dict(hoster_id)
     return None
@@ -71,7 +71,7 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     # get all states
     hoster_id_state = {}
     for hosting_service in HostingService.query.filter_by(type=type).all():
-        hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
+        hoster_id_state[hosting_service.id] = get_state_manager().get_state_dict(
             hosting_service.id
         )
 

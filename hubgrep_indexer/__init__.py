@@ -13,11 +13,19 @@ import logging
 db = SQLAlchemy()
 
 migrate = Migrate()
-state_manager = RedisStateManager()
 logger = logging.getLogger(__name__)
 
 # fix keep-alive in dev server (dropped connections from client sessions)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
+
+def get_state_manager():
+    # ugly fix: the state manager keeps growing in memory
+    # - we just make a new object every time now :(
+    from flask import current_app
+    state_manager = RedisStateManager()
+    state_manager.redis = redis.from_url(current_app.config['REDIS_URL'])
+    return state_manager
 
 
 def create_app():
@@ -33,8 +41,6 @@ def create_app():
 
     app.config.from_object(config_mapping[app_env])
 
-    # todo: make init_app function?
-    state_manager.redis = redis.from_url(app.config['REDIS_URL'])
 
     init_logging(loglevel=app.config['LOGLEVEL'])
 

@@ -13,7 +13,7 @@ from hubgrep_indexer.lib.block_helpers import (
 )
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
-from hubgrep_indexer import db, state_manager
+from hubgrep_indexer import db, get_state_manager
 
 from hubgrep_indexer.api_blueprint import api
 
@@ -47,7 +47,7 @@ def hosters():
 
 @api.route("/hosters/<hosting_service_id>/state", methods=['GET'])
 def state(hosting_service_id: int):
-    blocks = state_manager.get_blocks(hosting_service_id)
+    blocks = get_state_manager().get_blocks(hosting_service_id)
     block_dicts = [block.to_dict() for block in blocks.values()]
     return jsonify(block_dicts)
     """
@@ -123,7 +123,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
 
-    if not hosting_service.repo_class:
+    repo_class = Repository.repo_class_for_type(hosting_service.type)
+    if not repo_class:
         return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
@@ -136,7 +137,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     state_helper = get_state_helper(hosting_service.type)
     run_is_finished = state_helper.resolve_state(
         hosting_service_id=hosting_service_id,
-        state_manager=state_manager,
+        state_manager=get_state_manager(),
         block_uid=block_uid,
         repo_dicts=repo_dicts,
     )
@@ -144,7 +145,10 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         now = datetime.datetime.now()
         date_str = now.strftime("%Y%m%d_%H%M")
         export_filename = f"{hosting_service.hoster_name}_{date_str}.json.gz"
-        hosting_service.repo_class.export_json_gz(hosting_service_id, export_filename)
+
+        repo_class = Repository.repo_class_for_type(hosting_service.type)
+        repo_class.export_json_gz(hosting_service_id, export_filename)
+
         hosting_service.latest_export_json_gz = export_filename
         db.session.add(hosting_service)
         db.session.commit()
