@@ -8,17 +8,16 @@ import time
 from typing import Dict
 
 from flask import url_for
+from flask import current_app
 
 from hubgrep_indexer import state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
-
-from hubgrep_indexer.constants import OLD_RUN_AGE
 
 logger = logging.getLogger(__name__)
 
 
 def _state_is_too_old(state):
-    ts_old_run = time.time() - OLD_RUN_AGE
+    ts_old_run = time.time() - current_app.config['OLD_RUN_AGE']
     created_ts_too_old = state["run_created_ts"] < ts_old_run
     if not state["run_is_finished"] or created_ts_too_old:
         return True

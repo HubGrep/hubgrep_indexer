@@ -9,3 +9,4 @@ class TestingConfig(Config):
     # where the actual results end up on disk
     # (docker internal)
     RESULTS_PATH = '/tmp/'
+    OLD_RUN_AGE = 3600
