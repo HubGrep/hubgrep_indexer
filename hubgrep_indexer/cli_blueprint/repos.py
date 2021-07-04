@@ -29,7 +29,7 @@ def export_repos(hosting_service, json_path):
     type=str,
     help="api_url of the hosting service (eg. https://api.github.com/)",
 )
-def cleanup_exports(keep=None, hosting_service=None):
+def cleanup_exports(keep, hosting_service=None):
     if hosting_service:
         q = HostingService.query.filter_by(api_url=hosting_service)
     else:
@@ -46,6 +46,9 @@ def cleanup_exports(keep=None, hosting_service=None):
             file_abspath = Path(current_app.config["RESULTS_PATH"]).joinpath(
                 export.file_path
             )
-            os.remove(file_abspath)
+            try:
+                os.remove(file_abspath)
+            except FileNotFoundError:
+                print(f"couldnt find {file_abspath} - deleting the db entry")
             db.session.delete(export)
         db.session.commit()
