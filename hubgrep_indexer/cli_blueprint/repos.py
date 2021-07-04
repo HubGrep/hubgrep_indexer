@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 @cli_bp.cli.command()
 @click.argument("hosting_service")
-@click.argument("json_path", type=click.Path())
-def export_repos(hosting_service, json_path):
+def export_repos(hosting_service):
     hosting_service = HostingService.query.filter_by(api_url=hosting_service).first()
     export = hosting_service.export_repositories()
+    print(f"exported to {export.file_path}")
     db.session.add(export)
     db.session.commit()
 

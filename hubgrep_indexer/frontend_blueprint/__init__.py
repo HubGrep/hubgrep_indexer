@@ -12,5 +12,5 @@ def index():
     for hosting_service in HostingService.query.all():
         services_highest_ids.append(hosting_service.to_dict())
 
-    return jsonify(sorted(services_highest_ids, key=lambda d: d["num_repos"], reverse=True))
+    return jsonify(sorted(services_highest_ids, key=lambda d: d["id"], reverse=True))
 
