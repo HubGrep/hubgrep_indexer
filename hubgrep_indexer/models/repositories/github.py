@@ -18,8 +18,8 @@ class GithubRepository(Repository):
 
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
-    homepage_url = db.Column(db.String(200))  # "homepageUrl": null,
-    url = db.Column(db.String(200))  # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
+    homepage_url = db.Column(db.String(500))  # "homepageUrl": null,
+    url = db.Column(db.String(500))  # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
     created_at = db.Column(db.DateTime)  # "createdAt": "2014-03-09T05:10:10Z",
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
@@ -81,7 +81,10 @@ class GithubRepository(Repository):
         repo.url = d['url']
         repo.created_at = iso8601.parse_date(d['createdAt'])
         repo.updated_at = iso8601.parse_date(d['updatedAt'])
-        repo.pushed_at = iso8601.parse_date(d['pushedAt'])
+        if d.get('pushedAt', None):
+            repo.pushed_at = iso8601.parse_date(d['pushedAt'])
+        else:
+            repo.pushed_at = None
         repo.short_description_html = d['shortDescriptionHTML']
         repo.description = d['description']
         repo.is_archived = d['isArchived']

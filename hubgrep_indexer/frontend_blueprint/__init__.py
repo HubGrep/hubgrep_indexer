@@ -14,12 +14,12 @@ def index():
     services_highest_ids = []
     for hosting_service in HostingService.query.all():
         d = dict(
-            api_url=hosting_service.api_url,
-            highest_id=state_manager.get_current_highest_repo_id(hosting_service.id),
+            hoster_name=hosting_service.hoster_name,
+            repos=hosting_service.count(),
         )
         services_highest_ids.append(d)
 
-    return jsonify(services_highest_ids)
+    return jsonify(sorted(services_highest_ids, key=lambda d: d["repos"], reverse=True))
 
 
 @frontend.route("/exports")

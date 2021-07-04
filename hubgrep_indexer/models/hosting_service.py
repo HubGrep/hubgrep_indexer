@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import logging
 
 from sqlalchemy.engine import ResultProxy
+from sqlalchemy import func
 
 from flask import current_app
 
@@ -73,7 +74,7 @@ class HostingService(db.Model):
             api_url=self.api_url,
             hoster_name=self.hoster_name,
             latest_export_json_gz=latest_export_json_gz_url,
-            num_repos=self.repos.count()
+            num_repos=self.repos.count(),
         )
         if include_secrets:
             d["api_key"] = self.api_key
@@ -110,3 +111,13 @@ class HostingService(db.Model):
         """
         repo_class = Repository.repo_class_for_type(self.type)
         return repo_class.query.filter_by(hosting_service=self)
+
+    def count(self) -> int:
+        repo_class = Repository.repo_class_for_type(self.type)
+        # fast counting: https://gist.github.com/hest/8798884
+        return db.session.execute(
+            db.session.query(repo_class)
+            .filter_by(hosting_service_id=self.id)
+            .statement.with_only_columns([func.count()])
+            .order_by(None)
+        ).scalar()
