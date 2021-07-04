@@ -26,6 +26,8 @@ class Export(db.Model):
     created_at = db.Column(db.DateTime(), nullable=False)
     file_path = db.Column(db.String(500), nullable=False)
 
+    repo_count = db.Column(db.Integer, nullable=True)
+
     def __str__(self):
         return f"Export {self.hosting_service.hoster_name} @ {self.created_at}"
 
@@ -74,6 +76,7 @@ class HostingService(db.Model):
         export.created_at = now
         export.file_path = export_filename
         export.hosting_service_id = self.id
+        export.repo_count = self.count()
         return export
 
     def get_request_headers(self):
@@ -108,7 +111,7 @@ class HostingService(db.Model):
             export_url = urljoin(
                 results_base_url, export.file_path
             )
-            exports.append(dict(created_at=export.created_at, url=export_url))
+            exports.append(dict(created_at=export.created_at, url=export_url, repo_count=export.repo_count))
 
         d = dict(
             id=self.id,
@@ -117,7 +120,6 @@ class HostingService(db.Model):
             api_url=self.api_url,
             hoster_name=self.hoster_name,
             exports=exports,
-            num_repos=self.count(),
         )
         if include_secrets:
             d["api_key"] = self.api_key
