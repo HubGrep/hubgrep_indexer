@@ -41,7 +41,7 @@ from sqlalchemy import Index
 
 class GiteaRepository(Repository):
     __tablename__ = "gitea_repositories"
-    __table_args__ = (Index('repo_ident_index_gitea', "id", "gitea_id"), )
+    __table_args__ = (Index('repo_ident_index_gitea', "hosting_service_id", "gitea_id"), )
 
     gitea_id = db.Column(db.Integer)  # 2
     name = db.Column(db.String(200))  # "repo_name",

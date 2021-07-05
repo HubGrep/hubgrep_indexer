@@ -1,3 +1,4 @@
+import time
 from flask import request
 from flask import jsonify
 
@@ -30,8 +31,9 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         return jsonify(status="error", msg="unknown repo type"), 500
 
     # add repos to the db :)
+    before = time.time()
+    repo_class = Repository.repo_class_for_type(hosting_service.type)
     for repo_dict in repo_dicts:
-        repo_class = Repository.repo_class_for_type(hosting_service.type)
         try:
             r = repo_class.from_dict(hosting_service_id, repo_dict)
             db.session.add(r)
@@ -39,6 +41,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
             logger.exception("could not parse repo dict")
             logger.warning(f"{repo_dict}")
     db.session.commit()
+    logger.debug(f"adding took {time.time() - before}s")
 
     state_helper = get_state_helper(hosting_service.type)
     run_is_finished = state_helper.resolve_state(
