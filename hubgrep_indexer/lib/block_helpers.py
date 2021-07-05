@@ -77,16 +77,17 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     # remove everything finished recently
     crawlable_hosters = {}
     for hoster_id, state in hoster_id_state.items():
-        logger.debug(f"checking hoster {hoster_id}")
+        #logger.debug(f"checking hoster {hoster_id}")
         if _state_is_too_old(state):
-            logger.debug(f"hoster {hoster_id} would be crawlable...")
+            #logger.debug(f"hoster {hoster_id} would be crawlable...")
             crawlable_hosters[hoster_id] = state
-
+    
     if not crawlable_hosters:
         # everything up to date, nothing to do
         logger.warning("no crawlable hosters!")
         return None
 
+    logger.debug(f"crawlable hosters: {crawlable_hosters.keys()}")
     # get the oldest one in crawlable_hosters
     oldest_hoster_id, oldest_hoster_state = min(
         crawlable_hosters.items(),

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class GithubRepository(Repository):
     __tablename__ = "github_repositories"
-    __table_args__ = (Index('repo_ident_index_github', "id", "github_id"), )
+    __table_args__ = (Index('repo_ident_index_github', "hosting_service_id", "github_id"), )
 
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
