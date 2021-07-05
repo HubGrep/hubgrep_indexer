@@ -8,17 +8,16 @@ import time
 from typing import Dict
 
 from flask import url_for
+from flask import current_app
 
 from hubgrep_indexer import state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
-
-from hubgrep_indexer.constants import OLD_RUN_AGE
 
 logger = logging.getLogger(__name__)
 
 
 def _state_is_too_old(state):
-    ts_old_run = time.time() - OLD_RUN_AGE
+    ts_old_run = time.time() - current_app.config['OLD_RUN_AGE']
     created_ts_too_old = state["run_created_ts"] < ts_old_run
     if not state["run_is_finished"] or created_ts_too_old:
         return True
@@ -28,6 +27,7 @@ def _state_is_too_old(state):
 def _get_block_dict(hosting_service_id) -> Dict:
     timed_out_block = state_manager.get_timed_out_block(hosting_service_id)
     if timed_out_block:
+        logger.info(f"re-attempting timed out block, uid: {timed_out_block.uid}")
         block = timed_out_block
     else:
         block = state_manager.get_next_block(hosting_service_id)
@@ -77,16 +77,17 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     # remove everything finished recently
     crawlable_hosters = {}
     for hoster_id, state in hoster_id_state.items():
-        logger.debug(f"checking hoster {hoster_id}")
+        #logger.debug(f"checking hoster {hoster_id}")
         if _state_is_too_old(state):
-            logger.debug(f"hoster {hoster_id} would be crawlable...")
+            #logger.debug(f"hoster {hoster_id} would be crawlable...")
             crawlable_hosters[hoster_id] = state
-
+    
     if not crawlable_hosters:
         # everything up to date, nothing to do
         logger.warning("no crawlable hosters!")
         return None
 
+    logger.debug(f"crawlable hosters: {crawlable_hosters.keys()}")
     # get the oldest one in crawlable_hosters
     oldest_hoster_id, oldest_hoster_state = min(
         crawlable_hosters.items(),
@@ -94,6 +95,6 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
             "run_created_ts",
         ),
     )
-    logger.debug(f"making block for hoster {oldest_hoster_id}:")
+    logger.debug(f"creating block for hoster {oldest_hoster_id}:")
     logger.debug(f"state {oldest_hoster_state}:")
     return _get_block_dict(oldest_hoster_id)

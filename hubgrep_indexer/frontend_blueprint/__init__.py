@@ -1,32 +1,16 @@
-from flask import Blueprint, render_template, jsonify
-from flask import current_app as app
-
-frontend = Blueprint("frontend", __name__)
-
-from hubgrep_indexer import db, state_manager
+from flask import Blueprint
+from flask import jsonify
 
 from hubgrep_indexer.models.hosting_service import HostingService
-from hubgrep_indexer.models.repositories.gitea import GiteaRepository
+
+frontend = Blueprint("frontend", __name__)
 
 
 @frontend.route("/")
 def index():
     services_highest_ids = []
     for hosting_service in HostingService.query.all():
-        d = dict(
-            api_url=hosting_service.api_url,
-            highest_id=state_manager.get_current_highest_repo_id(hosting_service.id),
-        )
-        services_highest_ids.append(d)
+        services_highest_ids.append(hosting_service.to_dict())
 
-    return jsonify(services_highest_ids)
+    return jsonify(sorted(services_highest_ids, key=lambda d: d["id"], reverse=True))
 
-
-@frontend.route("/exports")
-def exports():
-    exports = []
-    for hosting_service in HostingService.query.all():
-        d = {hosting_service.hoster_name: hosting_service.to_dict()}
-        exports.append(d)
-
-    return jsonify(exports)

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 class GitlabRepository(Repository):
     __tablename__ = "gitlab_repositories"
-    __table_args__ = (Index('repo_ident_index_gitlab', "id", "gitlab_id"), )
+    __table_args__ = (Index('repo_ident_index_gitlab', "hosting_service_id", "gitlab_id"), )
 
     gitlab_id = db.Column(db.Integer)  # 'id': 1241825,
     description = db.Column(db.Text)  # 'description': 'Pacote LaTeXe para produção de monografias, dissertações e teses',

@@ -1,27 +1,35 @@
-import csv
 import re
-import json
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 import logging
 
+import datetime
+
 from sqlalchemy.engine import ResultProxy
+from sqlalchemy import func
 
 from flask import current_app
-from typing import BinaryIO
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-    HOST_TYPE_GITEA,
-    HOST_TYPE_GITLAB,
-)
-from hubgrep_indexer.models.repositories.gitea import GiteaRepository
-from hubgrep_indexer.models.repositories.github import GithubRepository
-from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
-
 
 from hubgrep_indexer import db
-
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 logger = logging.getLogger(__name__)
+
+
+class Export(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    hosting_service = db.relationship("HostingService")
+    hosting_service_id = db.Column(
+        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
+    )
+
+    created_at = db.Column(db.DateTime(), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+
+    repo_count = db.Column(db.Integer, nullable=True)
+
+    def __str__(self):
+        return f"Export {self.hosting_service.hoster_name} @ {self.created_at}"
 
 
 class HostingService(db.Model):
@@ -34,16 +42,42 @@ class HostingService(db.Model):
     # should this be unique, or can we use it to store multiple
     # api keys for a backend?
     api_url = db.Column(db.String(500), unique=True, nullable=False)
-
-    latest_export_json_gz = db.Column(db.String(500))
-
     api_key = db.Column(db.String(500), nullable=True)
 
     @property
     def hoster_name(self):
-        from urllib.parse import urlparse
+        return str(urlparse(self.landingpage_url).netloc)
 
-        return urlparse(self.landingpage_url).netloc
+    def get_exports(self):
+        """
+        shorthand for the query to this hosters exports, sorted by datetime
+        (newest first)
+        """
+        return (
+            Export.query.filter_by(hosting_service_id=self.id)
+            .order_by(Export.created_at.desc())
+        )
+
+    def export_repositories(self, export_filename=None):
+        """
+        Export this hosters repositories to a gzipped json file.
+
+        returns `Export` (needs to be commited to the db!)
+        """
+        if not export_filename:
+            now = datetime.datetime.now()
+            date_str = now.strftime("%Y%m%d_%H%M")
+            export_filename = f"{self.hoster_name}_{date_str}.json.gz"
+
+        repo_class = Repository.repo_class_for_type(self.type)
+        repo_class.export_json_gz(self.id, export_filename)
+
+        export = Export()
+        export.created_at = now
+        export.file_path = export_filename
+        export.hosting_service_id = self.id
+        export.repo_count = self.count()
+        return export
 
     def get_request_headers(self):
         """
@@ -71,20 +105,21 @@ class HostingService(db.Model):
 
         includes the result url, and things we might want to have in an api later.
         """
+        exports = []
         results_base_url = current_app.config["RESULTS_BASE_URL"]
-        latest_export_json_gz_url = None
-        if self.latest_export_json_gz:
-            latest_export_json_gz_url = urljoin(
-                results_base_url, self.latest_export_json_gz
+        for export in self.get_exports():
+            export_url = urljoin(
+                results_base_url, export.file_path
             )
+            exports.append(dict(created_at=export.created_at, url=export_url, repo_count=export.repo_count))
+
         d = dict(
             id=self.id,
             type=self.type,
             landingpage_url=self.landingpage_url,
             api_url=self.api_url,
             hoster_name=self.hoster_name,
-            latest_export_json_gz=latest_export_json_gz_url,
-            num_repos=self.repos.count()
+            exports=exports,
         )
         if include_secrets:
             d["api_key"] = self.api_key
@@ -102,22 +137,21 @@ class HostingService(db.Model):
         return hosting_service
 
     @property
-    def repo_class(self):
-        """
-        return the repo class for this hoster
-        """
-        RepoClasses = {
-            HOST_TYPE_GITHUB: GithubRepository,
-            HOST_TYPE_GITEA: GiteaRepository,
-            HOST_TYPE_GITLAB: GitlabRepository,
-        }
-        return RepoClasses[self.type]
-
-    @property
     def repos(self) -> ResultProxy:
         """
         get all repositories for this hoster.
 
         call like hoster.repos.all() (or whatever you want to do with it)
         """
-        return self.repo_class.query.filter_by(hosting_service=self)
+        repo_class = Repository.repo_class_for_type(self.type)
+        return repo_class.query.filter_by(hosting_service=self)
+
+    def count(self) -> int:
+        repo_class = Repository.repo_class_for_type(self.type)
+        # fast counting: https://gist.github.com/hest/8798884
+        return db.session.execute(
+            db.session.query(repo_class)
+            .filter_by(hosting_service_id=self.id)
+            .statement.with_only_columns([func.count()])
+            .order_by(None)
+        ).scalar()
