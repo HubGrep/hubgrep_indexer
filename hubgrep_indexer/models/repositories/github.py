@@ -132,4 +132,5 @@ class GithubRepository(Repository):
         repo["primary_language_name"] = self.primary_language_name
         repo["license_name"] = self.license_name
         repo["license_nickname"] = self.license_nickname
+        return repo
 
