@@ -64,6 +64,8 @@ class HostingService(db.Model):
 
         returns `Export` (needs to be commited to the db!)
         """
+        repo_count = self.count()
+
         if not export_filename:
             now = datetime.datetime.now()
             date_str = now.strftime("%Y%m%d_%H%M")
@@ -76,7 +78,7 @@ class HostingService(db.Model):
         export.created_at = now
         export.file_path = export_filename
         export.hosting_service_id = self.id
-        export.repo_count = self.count()
+        export.repo_count = repo_count
         return export
 
     def get_request_headers(self):
@@ -111,7 +113,7 @@ class HostingService(db.Model):
             export_url = urljoin(
                 results_base_url, export.file_path
             )
-            exports.append(dict(created_at=export.created_at, url=export_url, repo_count=export.repo_count))
+            exports.append(dict(created_at=export.created_at.isoformat(), url=export_url, repo_count=export.repo_count))
 
         d = dict(
             id=self.id,

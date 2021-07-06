@@ -9,6 +9,7 @@ import json
 import datetime
 from typing import Union
 from pathlib import Path
+import itertools
 
 from flask import current_app
 from sqlalchemy.ext.declarative import declared_attr
@@ -34,33 +35,20 @@ class DateTimeEncoder(json.JSONEncoder):
         elif isinstance(obj, datetime.timedelta):
             return (datetime.datetime.min + obj).time().isoformat()
 
-
 class StreamArray(list):
-    """
-    Converts a generator into a list object that can be json serialisable
-    while still retaining the iterative nature of a generator.
+    # https://stackoverflow.com/a/46841935
+    """Generator that is serializable by JSON"""
 
-    IE. It converts it to a list without having to exhaust the generator
-    and keep it's contents in memory.
-    """
-
-    # https://stackoverflow.com/a/45143995
-    def __init__(self, generator):
-        self.generator = generator
-        self._len = 1
+    def __init__(self, iterable):
+        tmp_body = iter(iterable)
+        try:
+            self._head = iter([next(tmp_body)])
+            self.append(tmp_body)
+        except StopIteration:
+            self._head = []
 
     def __iter__(self):
-        self._len = 0
-        for item in self.generator:
-            yield item
-            self._len += 1
-
-    def __len__(self):
-        """
-        Json parser looks for a this method to confirm whether or not it can
-        be parsed
-        """
-        return self._len
+        return itertools.chain(self._head, *self[:1])
 
 
 class Repository(db.Model):

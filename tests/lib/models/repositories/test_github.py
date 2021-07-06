@@ -48,3 +48,4 @@ class TestGithubRepository:
 
             assert GithubRepository.query.count() == 1
             assert repo.github_id == 17558226
+
