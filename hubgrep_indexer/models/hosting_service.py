@@ -1,3 +1,4 @@
+import time
 import re
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -69,10 +70,12 @@ class HostingService(db.Model):
         if not export_filename:
             now = datetime.datetime.now()
             date_str = now.strftime("%Y%m%d_%H%M")
-            export_filename = f"{self.hoster_name}_{date_str}.json.gz"
+            export_filename = f"{self.hoster_name}_{date_str}.csv.gz"
 
         repo_class = Repository.repo_class_for_type(self.type)
-        repo_class.export_json_gz(self.id, export_filename)
+        before = time.time()
+        repo_class.export_csv_gz(self.id, export_filename)
+        logger.info(f'exporting {repo_count} repos took {time.time() - before}s')
 
         export = Export()
         export.created_at = now

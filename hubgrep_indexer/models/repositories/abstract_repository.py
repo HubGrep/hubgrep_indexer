@@ -35,6 +35,7 @@ class DateTimeEncoder(json.JSONEncoder):
         elif isinstance(obj, datetime.timedelta):
             return (datetime.datetime.min + obj).time().isoformat()
 
+
 class StreamArray(list):
     # https://stackoverflow.com/a/46841935
     """Generator that is serializable by JSON"""
@@ -69,7 +70,7 @@ class Repository(db.Model):
         return db.relationship("HostingService")
 
     @classmethod
-    def _yield_repo_list(cls, hosting_service_id=None, chunk_size=1000):
+    def _yield_repo_list(cls, hosting_service_id=None, chunk_size=100):
         """
         yield chunks of objects from the database
 
@@ -80,7 +81,7 @@ class Repository(db.Model):
         else:
             repos_query = cls.query
 
-        for repo in repos_query.order_by(cls.id.asc()).yield_per(chunk_size).all():
+        for repo in repos_query.order_by(cls.id.asc()).yield_per(chunk_size):
             yield repo.to_dict()
 
     @classmethod
@@ -100,7 +101,7 @@ class Repository(db.Model):
             results_base_path = current_app.config["RESULTS_PATH"]
         results_base_path = Path(results_base_path)
         with gzip.open(
-            results_base_path.joinpath(filename), "wt", encoding="UTF-8"
+            results_base_path.joinpath(filename), "wt", encoding="UTF-8", newline="\n"
         ) as zipfile:
             # first call to get the generator
             large_generator_handle = cls._yield_repo_list(
@@ -111,6 +112,36 @@ class Repository(db.Model):
             stream_array = StreamArray(large_generator_handle)
             for chunk in DateTimeEncoder().iterencode(stream_array):
                 zipfile.write(chunk)
+    @classmethod
+    def export_csv_gz(cls, hosting_service_id, filename, results_base_path=None):
+        """
+        export table content to a csv
+
+        this feels horribly hacky, but its fast.
+        """
+        if not results_base_path:
+            results_base_path = current_app.config["RESULTS_PATH"]
+        results_base_path = Path(results_base_path)
+
+        from hubgrep_indexer.models.hosting_service import HostingService
+
+        hosting_service = HostingService.query.get(hosting_service_id)
+        repo_class = cls.repo_class_for_type(hosting_service.type)
+        
+        con = db.engine.raw_connection()
+        try:
+            cur = con.cursor()
+            result_path = f"{current_app.config['RESULTS_PATH']}/{filename}"
+            with gzip.open(result_path, "w") as gzfile:
+                cur.copy_expert(f"""
+                        COPY (select * from {repo_class.__tablename__} 
+                        where hosting_service_id = {hosting_service_id})
+                        TO STDOUT
+                        delimiter ';'
+                        csv header
+                        """, gzfile)
+        finally:
+            con.close()
 
     def to_dict(self):
         raise NotImplementedError
@@ -120,7 +151,7 @@ class Repository(db.Model):
         raise NotImplementedError
 
     @classmethod
-    def repo_class_for_type(cls, type: str) -> 'Repository':
+    def repo_class_for_type(cls, type: str) -> "Repository":
         # prevent circular import
         from hubgrep_indexer.models.repositories.gitea import GiteaRepository
         from hubgrep_indexer.models.repositories.github import GithubRepository
