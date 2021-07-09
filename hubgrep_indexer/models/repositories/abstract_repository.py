@@ -3,7 +3,7 @@ All hoster repo classes are inherited from the AbstractRepository class defined 
 
 This module contains helpers to export the repos as well.
 """
-
+import logging
 import gzip
 import json
 import datetime
@@ -22,6 +22,7 @@ from hubgrep_indexer.constants import (
 
 from hubgrep_indexer import db
 
+logger = logging.getLogger(__name__)
 
 class DateTimeEncoder(json.JSONEncoder):
     """
@@ -112,36 +113,68 @@ class Repository(db.Model):
             stream_array = StreamArray(large_generator_handle)
             for chunk in DateTimeEncoder().iterencode(stream_array):
                 zipfile.write(chunk)
+
     @classmethod
-    def export_csv_gz(cls, hosting_service_id, filename, results_base_path=None):
+    def export_csv_gz(
+        cls,
+        hosting_service_id,
+        hosting_service_type,
+        filename,
+        results_base_path=None,
+        select_statement_template=None,
+    ):
         """
         export table content to a csv
 
         this feels horribly hacky, but its fast.
         """
+        repo_class = cls.repo_class_for_type(hosting_service_type)
+
         if not results_base_path:
             results_base_path = current_app.config["RESULTS_PATH"]
         results_base_path = Path(results_base_path)
 
-        from hubgrep_indexer.models.hosting_service import HostingService
+        if not select_statement_template:
+            select_statement_template = """
+            select * from {TABLE_NAME}
+            where hosting_service_id = {HOSTING_SERVICE_ID}
+            """
+        select_statement = select_statement_template.format(
+            TABLE_NAME=repo_class.__tablename__,
+            HOSTING_SERVICE_ID=hosting_service_id,
+        )
 
-        hosting_service = HostingService.query.get(hosting_service_id)
-        repo_class = cls.repo_class_for_type(hosting_service.type)
-        
+        logger.debug(f"select statement: {select_statement}")
+
         con = db.engine.raw_connection()
         try:
             cur = con.cursor()
             result_path = f"{current_app.config['RESULTS_PATH']}/{filename}"
             with gzip.open(result_path, "w") as gzfile:
-                cur.copy_expert(f"""
-                        COPY (select * from {repo_class.__tablename__} 
-                        where hosting_service_id = {hosting_service_id})
+                cur.copy_expert(
+                    f"""
+                        COPY ({select_statement})
                         TO STDOUT
                         delimiter ';'
                         csv header
-                        """, gzfile)
+                        """,
+                    gzfile,
+                )
         finally:
             con.close()
+
+    @classmethod
+    def export_unified_csv_gz(
+        cls, hosting_service_id, hosting_service_type, filename, results_base_path=None
+    ):
+        select_statement_template = cls.unified_select_statement_template
+        cls.export_csv_gz(
+            hosting_service_id,
+            hosting_service_type,
+            filename,
+            results_base_path,
+            select_statement_template,
+        )
 
     def to_dict(self):
         raise NotImplementedError

@@ -33,13 +33,16 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     # add repos to the db :)
     before = time.time()
     repo_class = Repository.repo_class_for_type(hosting_service.type)
+    repos_to_add = []
     for repo_dict in repo_dicts:
         try:
             r = repo_class.from_dict(hosting_service_id, repo_dict)
-            db.session.add(r)
+            repos_to_add.append(r)
         except Exception as e:
             logger.exception("could not parse repo dict")
             logger.warning(f"{repo_dict}")
+
+    db.session.bulk_save_objects(repos_to_add)
     db.session.commit()
     logger.debug(f"adding took {time.time() - before}s")
 
@@ -51,7 +54,10 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         repo_dicts=repo_dicts,
     )
     if run_is_finished:
-        export = hosting_service.export_repositories()
+        export = hosting_service.export_repositories(unified=False)
+        db.session.add(export)
+        db.session.commit()
+        export = hosting_service.export_repositories(unified=True)
         db.session.add(export)
         db.session.commit()
 

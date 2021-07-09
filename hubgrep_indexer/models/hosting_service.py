@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import logging
 
 import datetime
+from typing import List, Dict
 
 from sqlalchemy.engine import ResultProxy
 from sqlalchemy import func
@@ -13,24 +14,9 @@ from flask import current_app
 
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
+from hubgrep_indexer.models.export import Export
 
 logger = logging.getLogger(__name__)
-
-
-class Export(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    hosting_service = db.relationship("HostingService")
-    hosting_service_id = db.Column(
-        db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
-    )
-
-    created_at = db.Column(db.DateTime(), nullable=False)
-    file_path = db.Column(db.String(500), nullable=False)
-
-    repo_count = db.Column(db.Integer, nullable=True)
-
-    def __str__(self):
-        return f"Export {self.hosting_service.hoster_name} @ {self.created_at}"
 
 
 class HostingService(db.Model):
@@ -49,17 +35,36 @@ class HostingService(db.Model):
     def hoster_name(self):
         return str(urlparse(self.landingpage_url).netloc)
 
-    def get_exports(self):
+    def get_exports_dict(self, unified=False) -> List[Dict]:
         """
         shorthand for the query to this hosters exports, sorted by datetime
         (newest first)
         """
-        return (
-            Export.query.filter_by(hosting_service_id=self.id)
-            .order_by(Export.created_at.desc())
-        )
+        query = Export.query.filter_by(hosting_service_id=self.id, is_raw=(not unified))
+        query.order_by(Export.created_at.desc())
 
-    def export_repositories(self, export_filename=None):
+        results_base_url = current_app.config["RESULTS_BASE_URL"]
+        exports = []
+        for export in query:
+            export_url = urljoin(results_base_url, export.file_path)
+            exports.append(
+                dict(
+                    created_at=export.created_at.isoformat(),
+                    url=export_url,
+                    repo_count=export.repo_count,
+                )
+            )
+        return exports
+
+    def _get_default_export_filename(self, timestamp: datetime, unified=False):
+        date_str = timestamp.strftime("%Y%m%d_%H%M")
+        export_base_name = f"{self.hoster_name}"
+        export_base_name += "_unified" if unified else "_raw"
+        filename_suffix = f"_{date_str}.csv.gz"
+        export_filename = export_base_name + filename_suffix
+        return export_filename
+
+    def export_repositories(self, unified=False, export_filename=None):
         """
         Export this hosters repositories to a gzipped json file.
 
@@ -67,21 +72,24 @@ class HostingService(db.Model):
         """
         repo_count = self.count()
 
+        now = datetime.datetime.now()
         if not export_filename:
-            now = datetime.datetime.now()
-            date_str = now.strftime("%Y%m%d_%H%M")
-            export_filename = f"{self.hoster_name}_{date_str}.csv.gz"
+            export_filename = self._get_default_export_filename(now, unified)
 
         repo_class = Repository.repo_class_for_type(self.type)
         before = time.time()
-        repo_class.export_csv_gz(self.id, export_filename)
-        logger.info(f'exporting {repo_count} repos took {time.time() - before}s')
+        if not unified:
+            repo_class.export_csv_gz(self.id, self.type, export_filename)
+        else:
+            repo_class.export_unified_csv_gz(self.id, self.type, export_filename)
+        logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
 
         export = Export()
         export.created_at = now
         export.file_path = export_filename
         export.hosting_service_id = self.id
         export.repo_count = repo_count
+        export.is_raw = not unified
         return export
 
     def get_request_headers(self):
@@ -110,13 +118,6 @@ class HostingService(db.Model):
 
         includes the result url, and things we might want to have in an api later.
         """
-        exports = []
-        results_base_url = current_app.config["RESULTS_BASE_URL"]
-        for export in self.get_exports():
-            export_url = urljoin(
-                results_base_url, export.file_path
-            )
-            exports.append(dict(created_at=export.created_at.isoformat(), url=export_url, repo_count=export.repo_count))
 
         d = dict(
             id=self.id,
@@ -124,7 +125,8 @@ class HostingService(db.Model):
             landingpage_url=self.landingpage_url,
             api_url=self.api_url,
             hoster_name=self.hoster_name,
-            exports=exports,
+            exports_raw=self.get_exports_dict(unified=False),
+            exports_unified=self.get_exports_dict(unified=True),
         )
         if include_secrets:
             d["api_key"] = self.api_key

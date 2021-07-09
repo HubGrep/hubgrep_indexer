@@ -72,6 +72,29 @@ class GitlabRepository(Repository):
                   'avatar_url': 'https://secure.gravatar.com/avatar/ec3a8f5183465a232283493f3de0a80d?s=80&d=identicon',
                   'web_url': 'https://gitlab.com/dedekindbr'}
     """
+    unified_select_statement_template = """
+    select
+        gitlab_id as foreign_id,
+        name as repo_name,
+        user_name as namespace,
+        description as description,
+        created_at as created_at,
+        last_activity_at as updated_at,
+        last_activity_at as pushed_at,
+        star_count as stars_count,
+        forks_count as forks_count,
+        false as is_private,
+        false as is_fork,
+        false as is_archived,
+        false as is_disabled,
+        false as is_mirror,
+        web_url as homepage_url,
+        http_url_to_repo as repo_url
+    from
+        {TABLE_NAME}
+    where
+        hosting_service_id = {HOSTING_SERVICE_ID}
+    """
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GitlabRepository":
