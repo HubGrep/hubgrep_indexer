@@ -15,7 +15,5 @@ logger = logging.getLogger(__name__)
 def export_hosters():
     hosting_services = []
     for hosting_service in HostingService.query.all():
-        export = hosting_service.get_exports().first()
-        if export:
-            hosting_services.append(hosting_service.to_dict())
+        hosting_services.append(hosting_service.to_dict())
     return jsonify(hosting_services)

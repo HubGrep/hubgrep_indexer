@@ -24,6 +24,7 @@ from hubgrep_indexer import db
 
 logger = logging.getLogger(__name__)
 
+
 class DateTimeEncoder(json.JSONEncoder):
     """
     json encoder that can dump datetimes
@@ -165,7 +166,11 @@ class Repository(db.Model):
 
     @classmethod
     def export_unified_csv_gz(
-        cls, hosting_service_id, hosting_service_type, filename, results_base_path=None
+        cls,
+        hosting_service_id,
+        hosting_service_type,
+        filename,
+        results_base_path=None,
     ):
         select_statement_template = cls.unified_select_statement_template
         cls.export_csv_gz(

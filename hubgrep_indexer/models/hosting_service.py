@@ -76,7 +76,7 @@ class HostingService(db.Model):
         if not export_filename:
             export_filename = self._get_default_export_filename(now, unified)
 
-        repo_class = Repository.repo_class_for_type(self.type)
+        repo_class: Repository = Repository.repo_class_for_type(self.type)
         before = time.time()
         if not unified:
             repo_class.export_csv_gz(self.id, self.type, export_filename)
