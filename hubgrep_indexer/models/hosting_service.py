@@ -57,6 +57,9 @@ class HostingService(db.Model):
         return exports
 
     def _get_default_export_filename(self, timestamp: datetime, unified=False):
+        """
+        returns something like "codeberg.org_unified_20211231_1200.csv.gz"
+        """
         date_str = timestamp.strftime("%Y%m%d_%H%M")
         export_base_name = f"{self.hoster_name}"
         export_base_name += "_unified" if unified else "_raw"
