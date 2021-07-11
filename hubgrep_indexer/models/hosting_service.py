@@ -31,6 +31,9 @@ class HostingService(db.Model):
     api_url = db.Column(db.String(500), unique=True, nullable=False)
     api_key = db.Column(db.String(500), nullable=True)
 
+    def __str__(self):
+        return f"<{self.type}-{self.id}@{self.hoster_name}>"
+
     @property
     def hoster_name(self):
         return str(urlparse(self.landingpage_url).netloc)

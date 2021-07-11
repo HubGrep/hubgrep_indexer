@@ -19,13 +19,13 @@ def export_repos(hosting_service):
         api_url=hosting_service
     ).first()
 
-    print("exporting raw")
+    print(f"exporting raw repositories for {hosting_service}")
     export = hosting_service.export_repositories(unified=False)
     print(f"exported to {export.file_path}")
     db.session.add(export)
     db.session.commit()
 
-    print("exporting unified")
+    print(f"exporting unified repositories for {hosting_service}")
     export = hosting_service.export_repositories(unified=True)
     print(f"exported to {export.file_path}")
     db.session.add(export)
@@ -34,7 +34,7 @@ def export_repos(hosting_service):
 
 
 
-@cli_bp.cli.command()
+@cli_bp.cli.command(help="remove old exports, keep the newest ones")
 @click.option("--keep", type=int, default=3)
 @click.option(
     "--hosting-service",
@@ -42,6 +42,10 @@ def export_repos(hosting_service):
     help="api_url of the hosting service (eg. https://api.github.com/)",
 )
 def cleanup_exports(keep, hosting_service=None):
+    """
+    remove old exports from the hdd and their references from the db.
+    only keep the last <keep> exports.
+    """
     if hosting_service:
         q = HostingService.query.filter_by(api_url=hosting_service)
     else:
