@@ -2,6 +2,14 @@ from hubgrep_indexer import state_manager
 
 
 class TestGetBlock:
+    def test_get_blocks_auth(self, test_app, test_client, hosting_service):
+        test_app.config["LOGIN_DISABLED"] = False
+        with test_app.app_context():
+            b_response = test_app.test_client().get(f"/api/v1/hosters/{hosting_service.id}/block")
+            lbb_response = test_app.test_client().get("/api/v1/hosters/github/loadbalanced_block")
+            assert b_response.status == "401 UNAUTHORIZED"
+            assert lbb_response.status == "401 UNAUTHORIZED"
+
     def test_get_block(self, test_app, hosting_service):
         """
         todo: leaving this test very basic as renaming is likely

@@ -17,6 +17,12 @@ class TestAddRepos:
             assert new_repos[i].url == mock_github_repos[i]["url"]
             assert new_repos[i].owner_login == mock_github_repos[i]["owner"]["login"]
 
+    def test_add_repos_auth(self, test_app, test_client, hosting_service):
+        test_app.config["LOGIN_DISABLED"] = False
+        with test_app.app_context():
+            response = test_app.test_client().put(f"/api/v1/hosters/{hosting_service.id}/")
+            assert response.status == "401 UNAUTHORIZED"
+
     def test_put_github_repos(self, test_app, hosting_service):
         """
         Add repos connected to a hosting_service
