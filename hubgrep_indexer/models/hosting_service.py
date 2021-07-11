@@ -76,7 +76,7 @@ class HostingService(db.Model):
 
         returns `Export` (needs to be commited to the db!)
         """
-        repo_count = self.count()
+        repo_count = self.count_repos()
 
         now = datetime.datetime.now()
         if not export_filename:
@@ -159,7 +159,7 @@ class HostingService(db.Model):
         repo_class = Repository.repo_class_for_type(self.type)
         return repo_class.query.filter_by(hosting_service=self)
 
-    def count(self) -> int:
+    def count_repos(self) -> int:
         repo_class = Repository.repo_class_for_type(self.type)
         # fast counting: https://gist.github.com/hest/8798884
         return db.session.execute(
