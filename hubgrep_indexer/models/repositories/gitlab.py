@@ -75,8 +75,8 @@ class GitlabRepository(Repository):
     unified_select_statement_template = """
     select
         gitlab_id as foreign_id,
-        name as repo_name,
-        user_name as namespace,
+        name as name,
+        user_name as username,
         description as description,
         created_at as created_at,
         last_activity_at as updated_at,

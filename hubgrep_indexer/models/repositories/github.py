@@ -52,8 +52,8 @@ class GithubRepository(Repository):
     unified_select_statement_template = """
     select
         github_id as foreign_id,
-        name as repo_name,
-        owner_login as namespace,
+        name as name,
+        owner_login as username,
         description as description,
         created_at as created_at,
         updated_at as updated_at,

@@ -70,8 +70,8 @@ class GiteaRepository(Repository):
     unified_select_statement_template = """
     select
         gitea_id as foreign_id,
-        name as repo_name,
-        owner_username as namespace,
+        name as name,
+        owner_username as username,
         description as description,
         created_at as created_at,
         updated_at as updated_at,
