@@ -49,6 +49,7 @@ gitea_results = [
         "parent": None,
         "mirror": False,
         "size": 5188,
+        "html_url": "http://some/url",
         "website": "",
         "stars_count": 0,
         "forks_count": 0,

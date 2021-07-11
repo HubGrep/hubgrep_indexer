@@ -33,6 +33,6 @@ def hosters():
         hosting_service = HostingService.from_dict(request.json)
         db.session.add(hosting_service)
         db.session.commit()
-        return jsonify(hosting_service.crawler_dict())
+        return jsonify(hosting_service.to_dict())
 
 
