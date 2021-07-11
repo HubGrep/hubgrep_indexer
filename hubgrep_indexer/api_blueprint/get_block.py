@@ -1,4 +1,5 @@
 from flask import jsonify
+from flask_login import login_required
 
 import logging
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @api.route("/hosters/<type>/loadbalanced_block")
+@login_required
 def get_loadbalanced_block(type: str):
     block_dict = get_loadbalanced_block_for_crawler(type)
 
@@ -25,6 +27,7 @@ def get_loadbalanced_block(type: str):
 
 @api.route("/hosters/<hosting_service_id>/block")
 @api.route("/hosters/<hosting_service_id>/block", methods=['GET'])
+@login_required
 def get_block(hosting_service_id: int):
     block_dict = get_block_for_crawler(hosting_service_id)
 

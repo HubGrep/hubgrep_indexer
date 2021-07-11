@@ -4,6 +4,12 @@ from flask import current_app
 
 
 class TestHosters:
+    def test_get_hosters_auth(self, test_app, test_client):
+        test_app.config["LOGIN_DISABLED"] = False
+        with test_app.app_context():
+            response = test_client.get("/api/v1/hosters")
+            assert response.status == "401 UNAUTHORIZED"
+
     def test_post_get_hosters(self, test_client):
         with current_app.app_context() as app:
             assert HostingService.query.count() == 0
@@ -35,6 +41,3 @@ class TestHosters:
         response = test_client.get("/api/v1/hosters")
         assert response.json[0]['api_url'] == api_url
         assert response.json[0]['request_headers']['access_token'] == api_key
-
-
-

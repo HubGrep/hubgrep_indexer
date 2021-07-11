@@ -1,6 +1,7 @@
 import time
 from flask import request
 from flask import jsonify
+from flask_login import login_required
 
 import logging
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 @api.route("/hosters/<hosting_service_id>/", methods=["PUT"])
 @api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["PUT"])
+@login_required
 def add_repos(hosting_service_id: int, block_uid: int = None):
     """
     Add repository data used in our search-index.
