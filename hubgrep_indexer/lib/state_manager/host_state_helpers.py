@@ -116,7 +116,7 @@ class IStateHelper:
 
 
 class GitHubStateHelper(IStateHelper):
-    empty_results_max = 20
+    empty_results_max = 100
 
     @staticmethod
     def has_reached_end(
