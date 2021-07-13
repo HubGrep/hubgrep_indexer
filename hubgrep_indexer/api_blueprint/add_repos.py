@@ -54,9 +54,11 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         repo_dicts=repo_dicts,
     )
     if run_is_finished:
+        logger.info("run is finished, exporting raw!")
         export = hosting_service.export_repositories(unified=False)
         db.session.add(export)
         db.session.commit()
+        logger.info("raw export finished, starting unified!")
         export = hosting_service.export_repositories(unified=True)
         db.session.add(export)
         db.session.commit()
