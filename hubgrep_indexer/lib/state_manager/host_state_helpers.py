@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class IStateHelper:
     # maximum of returned callbacks containing no results, before we blind-reset
-    empty_results_max = 100
+    empty_results_max = 5
 
     @staticmethod
     def resolve_state(hosting_service_id: str,
@@ -116,7 +116,7 @@ class IStateHelper:
 
 
 class GitHubStateHelper(IStateHelper):
-    empty_results_max = 20
+    empty_results_max = 100
 
     @staticmethod
     def has_reached_end(
