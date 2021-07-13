@@ -180,6 +180,7 @@ class AbstractStateManager:
         self.set_run_is_finished(hoster_prefix, False)
         self.set_highest_block_repo_id(hoster_prefix, 0)
         self.set_highest_confirmed_repo_id(hoster_prefix, 0)
+        self.set_empty_results_counter(hoster_prefix, 0)
         self._reset_blocks(hoster_prefix)
 
     def finish_run(self, hoster_prefix: str):
