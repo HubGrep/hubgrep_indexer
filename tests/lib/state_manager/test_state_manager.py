@@ -83,6 +83,10 @@ class TestLocalStateManager:
         assert state_manager.get_run_created_ts(HOSTER_PREFIX) == created_ts
         assert state_manager.get_run_is_finished(HOSTER_PREFIX)
 
+    def test_set_run_not_finished(self, state_manager: AbstractStateManager):
+        state_manager.set_run_is_finished(HOSTER_PREFIX, False)
+        assert not state_manager.get_run_is_finished(HOSTER_PREFIX)
+
     def test_run_created_ts(self, state_manager: AbstractStateManager):
         # create a ts for "now"
         state_manager.set_run_created_ts(HOSTER_PREFIX)

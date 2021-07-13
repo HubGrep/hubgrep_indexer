@@ -78,7 +78,10 @@ class RedisStateManager(AbstractStateManager):
 
     def get_run_is_finished(self, hoster_prefix) -> bool:
         redis_key = f"{hoster_prefix}:{self.run_is_finished_key}"
-        return bool(self.redis.get(redis_key))
+        is_finished_str = self.redis.get(redis_key)
+        if is_finished_str:
+            is_finished_str = int(is_finished_str)
+        return bool(is_finished_str)
 
     def set_run_is_finished(self, hoster_prefix, is_finished: bool):
         redis_key = f"{hoster_prefix}:{self.run_is_finished_key}"
