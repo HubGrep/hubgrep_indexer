@@ -49,6 +49,9 @@ class IStateHelper:
         if len(repo_dicts) == 0:
             state_manager.increment_empty_results_counter(
                 hoster_prefix=hosting_service_id, amount=1)
+        else:
+            state_manager.set_empty_results_counter(
+                hoster_prefix=hosting_service_id, count=0)
 
         has_reached_end = IStateHelper.has_reached_end(
             hosting_service_id=hosting_service_id,
