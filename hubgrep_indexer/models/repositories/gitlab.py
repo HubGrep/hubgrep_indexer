@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
         'created_at': '2016-05-30T04:27:14.463Z',
         'default_branch': 'master',
         'tag_list': [],
+        'topics': ["key-maybe-not-here"]
         'ssh_url_to_repo': 'git@gitlab.com:dedekindbr/ufrrj.git',
         'http_url_to_repo': 'https://gitlab.com/dedekindbr/ufrrj.git',
         'web_url': 'https://gitlab.com/dedekindbr/ufrrj',
