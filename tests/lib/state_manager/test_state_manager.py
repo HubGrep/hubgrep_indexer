@@ -149,3 +149,24 @@ class TestRedisStateManager(TestLocalStateManager):
         manager.redis = redislite.Redis()
         yield manager
         manager.reset(hoster_prefix=HOSTER_PREFIX)
+
+
+    def test_get_lock(self, state_manager):
+        with state_manager.get_lock(1):
+            print("locked!")
+            assert True
+
+        # the same that the contextmanager does
+        lock = state_manager.get_lock(1)
+        lock.acquire(blocking=True)
+
+        lock2 = state_manager.get_lock(1)
+        # second lock blocks forever if not released - no idea how to test
+        #lock2.acquire(blocking=True)
+
+        # release is called when leaving the context
+        lock.release()
+
+
+
+
