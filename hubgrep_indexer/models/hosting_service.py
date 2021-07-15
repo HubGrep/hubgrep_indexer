@@ -82,6 +82,7 @@ class HostingService(db.Model):
         if not export_filename:
             export_filename = self._get_default_export_filename(now, unified)
 
+        logger.debug(f"exporting repos for {self}...")
         repo_class: Repository = Repository.repo_class_for_type(self.type)
         before = time.time()
         if not unified:

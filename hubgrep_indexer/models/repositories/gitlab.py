@@ -41,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 class GitlabRepository(Repository):
     __tablename__ = "gitlab_repositories"
-    __table_args__ = (Index('repo_ident_index_gitlab', "hosting_service_id", "gitlab_id"), )
 
     gitlab_id = db.Column(db.Integer)  # 'id': 1241825,
     description = db.Column(db.Text)  # 'description': 'Pacote LaTeXe para produção de monografias, dissertações e teses',
@@ -102,14 +101,7 @@ class GitlabRepository(Repository):
         name = d['name']
         gitlab_id = d['id']
 
-        repo = cls.query.filter_by(
-            hosting_service_id=hosting_service_id,
-            gitlab_id=gitlab_id
-        ).first()
-        if not update and not repo:
-            raise Exception("repo not found!")
-        if not repo:
-            repo = cls()
+        repo = cls()
 
         repo.hosting_service_id = hosting_service_id
         repo.gitlab_id = gitlab_id

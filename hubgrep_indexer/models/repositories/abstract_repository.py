@@ -25,6 +25,7 @@ class Repository(db.Model):
     __abstract__ = True
 
     id = db.Column(db.Integer, primary_key=True)
+    is_completed = db.Column(db.Boolean, nullable=True)
 
     # foreign keys in abstract classes need to be defined in attributes
     # https://stackoverflow.com/questions/32341408/sqlalchemy-concrete-inheritance-but-parent-has-foreignkey/32344269#32344269
@@ -37,6 +38,45 @@ class Repository(db.Model):
     @declared_attr
     def hosting_service(cls):
         return db.relationship("HostingService")
+
+    @classmethod
+    def rotate(cls, hosting_service):
+        """
+        delete repos from old runs, set `is_completed` to new ones
+        """
+        logger.debug(f"rotating repos for {hosting_service}")
+        repo_class = cls.repo_class_for_type(hosting_service.type)
+        con = db.engine.raw_connection()
+        try:
+            cur = con.cursor()
+            cur.execute(
+                f"""
+                delete
+                from {repo_class.__tablename__}
+                where
+                    is_completed is true
+                    and
+                    hosting_service_id = %s
+                """,
+                (hosting_service.id,),
+            )
+            # set our new imports to "is_completed", and add the hoster id
+            cur.execute(
+                f"""
+                update {repo_class.__tablename__}
+                set
+                    is_completed = true
+                where
+                    is_completed is null
+                    and
+                    hosting_service_id = %s
+                """,
+                (hosting_service.id,),
+            )
+            # commit!
+            con.commit()
+        finally:
+            con.close()
 
     @classmethod
     def export_csv_gz(
@@ -68,8 +108,7 @@ class Repository(db.Model):
             HOSTING_SERVICE_ID=hosting_service_id,
         )
 
-        logger.debug(f"select statement: {select_statement}")
-
+        logger.debug("running export...")
         con = db.engine.raw_connection()
         try:
             cur = con.cursor()
