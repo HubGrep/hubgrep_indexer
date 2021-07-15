@@ -27,59 +27,15 @@ class RedisStateManager(AbstractStateManager):
         self.highest_confirmed_repo_id_key = "highest_confirmed_repo_id"
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
+        self.lock_key = "lock"
 
     @classmethod
     def _get_redis_key(cls, hoster_prefix: str, key: str):
         return f"{hoster_prefix}:{key}"
-
-    def use_pipeline(self, is_pipeline: bool = True):
-        """
-        Swap in and out of using redis.pipeline() instead of direct redis commands.
-        Changes what self.redis points to, and thus all following calls will make use this context.
-        """
-        self.is_using_pipeline = is_pipeline
-        if self.is_using_pipeline:
-            self.redis = self.redis.pipeline()  # swap for everything to use the pipeline
-        else:
-            self.reset_pipeline()
-            self.redis = self._redis  # swapping back to non-pipeline
-
-    def execute_pipeline(self):
-        """ Execute all commands on the current pipeline. """
-        if self.is_using_pipeline:
-            self.redis.execute()
-        else:
-            logger.error(f"{''.join(traceback.format_stack())}"
-                         f"(ignoring call) trying to execute redis pipeline without using pipeline")
-
-    def reset_pipeline(self):
-        """ Clean up everything assigned to current pipeline. NOT required after calling use_pipeline(False)! """
-        if self.is_using_pipeline:
-            self.redis.reset()
-
-    def open_transaction(self):
-        if self.is_using_pipeline:
-            self.redis.multi()
-        else:
-            logger.warning(f"(ignoring call) trying open a redis transaction without using pipeline")
-
-    def watch_keys(self, keys: list):
-        """ Watch for key/value changes during pipeline command execution. """
-        if self.is_using_pipeline:
-            self.redis.watch(keys)
-        else:
-            logger.error(f"{''.join(traceback.format_stack())}"
-                         f"(ignoring call) trying to watch keys in redis pipeline without using pipeline")
-
-    def get_redis_keys(self, hoster_prefix: str):
-        return [
-            self._get_redis_key(hoster_prefix, self.highest_block_repo_id_key),
-            self._get_redis_key(hoster_prefix, self.highest_confirmed_repo_id_key),
-            self._get_redis_key(hoster_prefix, self.empty_results_counter_key),
-            self._get_redis_key(hoster_prefix, self.block_map_key),
-            self._get_redis_key(hoster_prefix, self.run_created_ts_key),
-            self._get_redis_key(hoster_prefix, self.run_is_finished_key),
-        ]
+    
+    def get_lock(self, hoster_prefix):
+        lock = self.redis.lock(f"{hoster_prefix}:{self.lock_key}")
+        return lock
 
     def set_highest_block_repo_id(self, hoster_prefix: str, repo_id: int):
         redis_key = self._get_redis_key(hoster_prefix, self.highest_block_repo_id_key)
@@ -88,7 +44,6 @@ class RedisStateManager(AbstractStateManager):
     def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
         redis_key = self._get_redis_key(hoster_prefix, self.highest_block_repo_id_key)
         highest_repo_id_str: str = self.redis.get(redis_key)
-        print("--- highest_repo_id_str?!", type(highest_repo_id_str), highest_repo_id_str)
         if not highest_repo_id_str:
             highest_repo_id = 0
         else:

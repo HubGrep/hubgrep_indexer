@@ -45,69 +45,44 @@ class IStateHelper:
                 # this Block belongs to an old run, so we avoid touching any state for it
                 return None
 
-        while True:
-            try:
-                # setup pipeline, and retry if watched keys change during execution
-                state_manager.use_pipeline(is_pipeline=True)
-                redis_keys = state_manager.get_redis_keys(hoster_prefix=hosting_service_id)
-                watch_keys = list(filter(lambda s: state_manager.block_map_key not in s, redis_keys))
-                # skipping block key as it might be too hot, and we probably dont care for it anyway
-                state_manager.watch_keys(*watch_keys)
+        state_manager.finish_block(
+            hoster_prefix=hosting_service_id, block_uid=block_uid)
+        if len(parsed_repos) == 0:
+            state_manager.increment_empty_results_counter(
+                hoster_prefix=hosting_service_id, amount=1)
+        else:
+            state_manager.set_empty_results_counter(
+                hoster_prefix=hosting_service_id, count=0)
 
-                # open state block-update transaction
-                state_manager.open_transaction()
-                state_manager.finish_block(
-                    hoster_prefix=hosting_service_id, block_uid=block_uid)
-                if len(parsed_repos) == 0:
-                    state_manager.increment_empty_results_counter(
-                        hoster_prefix=hosting_service_id, amount=1)
-                else:
-                    state_manager.set_empty_results_counter(
-                        hoster_prefix=hosting_service_id, count=0)
-                # execute state block-update transaction
-                state_manager.execute_pipeline()
+        # check on the effects of the block transaction
+        has_reached_end = IStateHelper.has_reached_end(
+            hosting_service_id=hosting_service_id,
+            state_manager=state_manager,
+            parsed_repos=parsed_repos,
+            block=block)
+        has_too_many_empty = IStateHelper.has_too_many_consecutive_empty_results(
+            hosting_service_id=hosting_service_id,
+            state_manager=state_manager)
 
-                # check on the effects of the block transaction
-                has_reached_end = IStateHelper.has_reached_end(
-                    hosting_service_id=hosting_service_id,
-                    state_manager=state_manager,
-                    parsed_repos=parsed_repos,
-                    block=block)
-                has_too_many_empty = IStateHelper.has_too_many_consecutive_empty_results(
-                    hosting_service_id=hosting_service_id,
-                    state_manager=state_manager)
+        if has_reached_end:
+            logger.info(f'crawler reached end for hoster: {hosting_service_id}')
+            state_manager.finish_run(hoster_prefix=hosting_service_id)
+        elif has_too_many_empty:
+            logger.info(f'crawler reach max empty results for hoster: {hosting_service_id}')
+            state_manager.finish_run(hoster_prefix=hosting_service_id)
+        else:
+            # we are somewhere in the middle of a hosters repos
+            # and we count up our confirmed ids and continue
+            if isinstance(block.ids, list) and len(block.ids) > 0:
+                repo_id = block.ids[-1]
+            else:
+                repo_id = block.to_id
+            # TODO before if/else does not take into account if we actually GOT this repo successfully
+            state_manager.set_highest_confirmed_repo_id(
+                hoster_prefix=hosting_service_id, repo_id=repo_id)
 
-                # open state run-update, reactive on the block-update transaction effects
-                state_manager.open_transaction()
-                if has_reached_end:
-                    logger.info(f'crawler reached end for hoster: {hosting_service_id}')
-                    state_manager.finish_run(hoster_prefix=hosting_service_id)
-                elif has_too_many_empty:
-                    logger.info(f'crawler reach max empty results for hoster: {hosting_service_id}')
-                    state_manager.finish_run(hoster_prefix=hosting_service_id)
-                else:
-                    # we are somewhere in the middle of a hosters repos
-                    # and we count up our confirmed ids and continue
-                    if isinstance(block.ids, list) and len(block.ids) > 0:
-                        repo_id = block.ids[-1]
-                    else:
-                        repo_id = block.to_id
-                    # TODO before if/else does not take into account if we actually GOT this repo successfully
-                    state_manager.set_highest_confirmed_repo_id(
-                        hoster_prefix=hosting_service_id, repo_id=repo_id)
-                # execute state run-update
-                state_manager.execute_pipeline()
-
-            except WatchError:
-                # this error happens if a watched key in redis changes during execution
-                # together with a while loop, we retry the whole loop if that happens by continuing here
-                continue
-            finally:
-                is_run_finished = state_manager.get_is_run_finished(hosting_service_id)
-                state_manager.use_pipeline(is_pipeline=False)
-
-            # finally return and terminate the while loop
-            return is_run_finished
+        # finally return and terminate the while loop
+        return state_manager.get_is_run_finished(hosting_service_id)
 
     @staticmethod
     def has_too_many_consecutive_empty_results(
