@@ -38,9 +38,9 @@ class IStateHelper:
             logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
             return None
         else:
-            run_is_finished = state_manager.get_is_run_finished(
+            is_run_finished = state_manager.get_is_run_finished(
                 hoster_prefix=hosting_service_id)
-            if run_is_finished:
+            if is_run_finished:
                 logger.info(f"skipping state update for outdated block, uid: {block_uid}")
                 # this Block belongs to an old run, so we avoid touching any state for it
                 return None
@@ -54,6 +54,8 @@ class IStateHelper:
                 # skipping block key as it might be too hot, and we probably dont care for it anyway
                 state_manager.watch_keys(*watch_keys)
 
+                # open state block-update transaction
+                state_manager.open_transaction()
                 state_manager.finish_block(
                     hoster_prefix=hosting_service_id, block_uid=block_uid)
                 if len(parsed_repos) == 0:
@@ -62,7 +64,7 @@ class IStateHelper:
                 else:
                     state_manager.set_empty_results_counter(
                         hoster_prefix=hosting_service_id, count=0)
-                # state block-update transaction
+                # execute state block-update transaction
                 state_manager.execute_pipeline()
 
                 # check on the effects of the block transaction
@@ -75,6 +77,8 @@ class IStateHelper:
                     hosting_service_id=hosting_service_id,
                     state_manager=state_manager)
 
+                # open state run-update, reactive on the block-update transaction effects
+                state_manager.open_transaction()
                 if has_reached_end:
                     logger.info(f'crawler reached end for hoster: {hosting_service_id}')
                     state_manager.finish_run(hoster_prefix=hosting_service_id)
@@ -91,8 +95,7 @@ class IStateHelper:
                     # TODO before if/else does not take into account if we actually GOT this repo successfully
                     state_manager.set_highest_confirmed_repo_id(
                         hoster_prefix=hosting_service_id, repo_id=repo_id)
-
-                # state run-update, reactive on the block-update transaction effects
+                # execute state run-update
                 state_manager.execute_pipeline()
 
             except WatchError:
@@ -103,6 +106,7 @@ class IStateHelper:
                 is_run_finished = state_manager.get_is_run_finished(hosting_service_id)
                 state_manager.use_pipeline(is_pipeline=False)
 
+            # finally return and terminate the while loop
             return is_run_finished
 
     @staticmethod

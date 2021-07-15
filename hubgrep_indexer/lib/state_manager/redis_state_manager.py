@@ -57,6 +57,12 @@ class RedisStateManager(AbstractStateManager):
         if self.is_using_pipeline:
             self.redis.reset()
 
+    def open_transaction(self):
+        if self.is_using_pipeline:
+            self.redis.multi()
+        else:
+            logger.warning(f"(ignoring call) trying open a redis transaction without using pipeline")
+
     def watch_keys(self, keys: list):
         """ Watch for key/value changes during pipeline command execution. """
         if self.is_using_pipeline:
