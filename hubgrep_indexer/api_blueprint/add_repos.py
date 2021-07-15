@@ -28,7 +28,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     repo_class = Repository.repo_class_for_type(hosting_service.type)
     if not repo_class:
-        return jsonify(status="error", msg="unknown repo type"), 500
+        return jsonify(status="error", msg="unknown repo type"), 403
 
     # add repos to the db :)
     logger.debug(f"adding repos to {hosting_service}")
