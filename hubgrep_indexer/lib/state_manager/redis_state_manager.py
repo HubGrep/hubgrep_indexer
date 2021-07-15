@@ -44,7 +44,6 @@ class RedisStateManager(AbstractStateManager):
     def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
         redis_key = self._get_redis_key(hoster_prefix, self.highest_block_repo_id_key)
         highest_repo_id_str: str = self.redis.get(redis_key)
-        print("--- highest_repo_id_str?!", type(highest_repo_id_str), highest_repo_id_str)
         if not highest_repo_id_str:
             highest_repo_id = 0
         else:

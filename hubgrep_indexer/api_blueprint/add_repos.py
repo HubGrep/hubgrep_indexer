@@ -50,7 +50,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     state_helper = get_state_helper(hosting_service.type)
 
     # will block, if the lock is already aquired, and go on after release
-    with state_helper.get_lock(hosting_service_id):
+    with state_manager.get_lock(hosting_service_id):
         run_is_finished = state_helper.resolve_state(
             hosting_service_id=hosting_service_id,
             state_manager=state_manager,
