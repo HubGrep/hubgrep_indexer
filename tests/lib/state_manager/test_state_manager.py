@@ -81,11 +81,11 @@ class TestLocalStateManager:
         assert state_manager.get_highest_block_repo_id(HOSTER_PREFIX) == highest_block_id
         assert state_manager.get_highest_confirmed_repo_id(HOSTER_PREFIX) == highest_confirmed_id
         assert state_manager.get_run_created_ts(HOSTER_PREFIX) == created_ts
-        assert state_manager.get_run_is_finished(HOSTER_PREFIX)
+        assert state_manager.get_is_run_finished(HOSTER_PREFIX)
 
     def test_set_run_not_finished(self, state_manager: AbstractStateManager):
-        state_manager.set_run_is_finished(HOSTER_PREFIX, False)
-        assert not state_manager.get_run_is_finished(HOSTER_PREFIX)
+        state_manager.set_is_run_finished(HOSTER_PREFIX, False)
+        assert not state_manager.get_is_run_finished(HOSTER_PREFIX)
 
     def test_run_created_ts(self, state_manager: AbstractStateManager):
         # create a ts for "now"

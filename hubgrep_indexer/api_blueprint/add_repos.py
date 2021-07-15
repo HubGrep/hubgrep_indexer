@@ -34,25 +34,25 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     logger.debug(f"adding repos to {hosting_service}")
     before = time.time()
     repo_class = Repository.repo_class_for_type(hosting_service.type)
-    repos_to_add = []
+    parsed_repos = []
     for repo_dict in repo_dicts:
         try:
             r = repo_class.from_dict(hosting_service_id, repo_dict)
-            repos_to_add.append(r)
+            parsed_repos.append(r)
         except Exception as e:
             logger.exception(f"could not parse repo dict for {hosting_service}")
-            logger.warning(f"repo dict: {repo_dict}")
+            logger.warning(f"(skipping) repo dict: {repo_dict}")
 
-    db.session.bulk_save_objects(repos_to_add)
+    db.session.bulk_save_objects(parsed_repos)
     db.session.commit()
-    logger.debug(f"adding {len(repos_to_add)} repos to {hosting_service} took {time.time() - before}s")
+    logger.debug(f"adding {len(parsed_repos)} repos to {hosting_service} took {time.time() - before}s")
 
     state_helper = get_state_helper(hosting_service.type)
     run_is_finished = state_helper.resolve_state(
         hosting_service_id=hosting_service_id,
         state_manager=state_manager,
         block_uid=block_uid,
-        repo_dicts=repo_dicts,
+        parsed_repos=parsed_repos,
     )
     if run_is_finished:
         logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
