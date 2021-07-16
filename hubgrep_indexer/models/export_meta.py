@@ -19,7 +19,7 @@ class ExportMeta(db.Model):
     is_raw = db.Column(db.Boolean, nullable=True)
 
     created_at = db.Column(db.DateTime(), nullable=False)
-    file_path = db.Column(db.String(500), nullable=False)
+    file_path = db.Column(db.String(500), nullable=True)  # indicating that the file has likely been removed
 
     repo_count = db.Column(db.Integer, nullable=True)
 
