@@ -33,7 +33,7 @@ def get_loadbalanced_block(type: str):
 def get_block(hosting_service_id: int):
     ts_before = time.time()
     hosting_service = HostingService.query.get(hosting_service_id)
-    block_dict = get_block_for_crawler(hosting_service)
+    block_dict = get_block_for_crawler(hosting_service.id)
     logger.debug(f"got a block for {hosting_service} - took {time.time() - ts_before}s")
 
     if not block_dict:

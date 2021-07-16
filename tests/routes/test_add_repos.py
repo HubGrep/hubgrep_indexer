@@ -37,7 +37,7 @@ class TestAddRepos:
         Get a block, attempt to add repos to according to that block
         """
         with test_app.app_context():
-            block = get_block_for_crawler(hoster_id=hosting_service.id)
+            block = get_block_for_crawler(hosting_service_id=hosting_service.id)
             self._add_repos(test_app,
                             hosting_service,
                             f"/api/v1/hosters/{hosting_service.id}/{block['uid']}")
