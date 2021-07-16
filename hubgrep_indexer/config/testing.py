@@ -11,5 +11,5 @@ class TestingConfig(Config):
     RESULTS_PATH = '/tmp/'
     OLD_RUN_AGE = 3600
 
-    INDEXER_API_KEY = "indexer-api-key"
+    INDEXER_API_KEY = "indexerapikey"
     LOGIN_DISABLED = True

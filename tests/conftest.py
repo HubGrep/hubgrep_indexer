@@ -44,6 +44,7 @@ def hosting_service(test_app, request):
     with test_app.app_context():
         hosting_service = HostingService()
         hosting_service.api_url = "https://api.something.com/"
+        hosting_service.api_key = "secretkey"
         hosting_service.landingpage_url = "https://something.com/"
         hosting_service.type = "github"
         db.session.add(hosting_service)
