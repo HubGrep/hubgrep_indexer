@@ -1,11 +1,7 @@
-import os
 import click
-from flask import current_app
-from pathlib import Path
 import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService, ExportMeta
-
 from hubgrep_indexer.cli_blueprint import cli_bp
 from hubgrep_indexer import db
 
