@@ -151,7 +151,7 @@ class TestRedisStateManager(TestLocalStateManager):
         yield manager
         manager.reset(hoster_prefix=HOSTER_PREFIX)
 
-    @pytest.mark.timeout(2)
+    @pytest.mark.timeout(4)
     def test_get_lock_is_blocking(self, state_manager):
         """
         We get a lock in a subprocess which waits before release, during this time we try to get a 2nd lock
@@ -169,4 +169,5 @@ class TestRedisStateManager(TestLocalStateManager):
         time.sleep(0.01)  # this is a bit finicky, delay slightly to end up executing BEHIND the subprocess
         _get_lock(state_manager, 0)
         time_blocked = time.time() - time_blocked
+        print("TIME BLOCKED", time_blocked)
         assert time_blocked > .5
