@@ -92,7 +92,7 @@ class AbstractStateManager:
             highest_confirmed_repo_id=self.get_highest_confirmed_repo_id(hoster_prefix),
             empty_results_count=self.get_empty_results_counter(hoster_prefix),
             run_created_ts=self.get_run_created_ts(hoster_prefix),
-            run_is_finished=self.get_run_is_finished(hoster_prefix),
+            run_is_finished=self.get_is_run_finished(hoster_prefix),
         )
 
     def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
@@ -177,7 +177,7 @@ class AbstractStateManager:
         """
         logger.warning(f"reset state for hoster: {hoster_prefix}")
         self.set_run_created_ts(hoster_prefix, None)
-        self.set_run_is_finished(hoster_prefix, False)
+        self.set_is_run_finished(hoster_prefix, False)
         self.set_highest_block_repo_id(hoster_prefix, 0)
         self.set_highest_confirmed_repo_id(hoster_prefix, 0)
         self.set_empty_results_counter(hoster_prefix, 0)
@@ -188,19 +188,19 @@ class AbstractStateManager:
         after we have finished crawling this hoster,
         set run_is_finished
         """
-        self.set_run_is_finished(hoster_prefix, True)
+        self.set_is_run_finished(hoster_prefix, True)
 
-    def set_run_is_finished(self, hoster_prefix: str, is_finished: bool):
+    def set_is_run_finished(self, hoster_prefix: str, is_finished: bool):
         raise NotImplementedError
 
-    def get_run_is_finished(self, hoster_prefix: str) -> bool:
+    def get_is_run_finished(self, hoster_prefix: str) -> bool:
         raise NotImplementedError
 
     def get_next_block(self, hoster_prefix: str) -> Block:
         """
         Return the next new block.
         """
-        if self.get_run_is_finished(hoster_prefix):
+        if self.get_is_run_finished(hoster_prefix):
             logger.warning("hoster was finished, resetting for a new run!")
             self.reset(hoster_prefix)
         highest_block_repo_id = self.get_highest_block_repo_id(hoster_prefix)
@@ -305,10 +305,10 @@ class LocalStateManager(AbstractStateManager):
             self.set_run_created_ts(hoster_prefix, 0)
         return self.run_created_timestamps[hoster_prefix]
 
-    def get_run_is_finished(self, hoster_prefix) -> bool:
+    def get_is_run_finished(self, hoster_prefix) -> bool:
         return self.run_is_finished.get(hoster_prefix, False)
 
-    def set_run_is_finished(self, hoster_prefix, is_finished: bool):
+    def set_is_run_finished(self, hoster_prefix, is_finished: bool):
         self.run_is_finished[hoster_prefix] = is_finished
 
     def set_empty_results_counter(self, hoster_prefix: str, count: int):
