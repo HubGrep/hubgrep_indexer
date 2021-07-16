@@ -4,7 +4,6 @@ from iso8601 import iso8601
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
-from sqlalchemy import Index
 """
     {'id': 2,
     'owner': {'id': 5,
@@ -41,7 +40,6 @@ from sqlalchemy import Index
 
 class GiteaRepository(Repository):
     __tablename__ = "gitea_repositories"
-    __table_args__ = (Index('repo_ident_index_gitea', "hosting_service_id", "gitea_id"), )
 
     gitea_id = db.Column(db.Integer)  # 2
     name = db.Column(db.String(200))  # "repo_name",
@@ -53,6 +51,7 @@ class GiteaRepository(Repository):
     # parent = db.Column(db.Boolean)  # "None",
     mirror = db.Column(db.Boolean)  # "False",
     size = db.Column(db.Integer)  # "repo_name",
+    html_url = db.Column(db.String(500), default="")
     website = db.Column(db.String(200))  # "repo_name",
     stars_count = db.Column(db.Integer)  # "repo_name",
     forks_count = db.Column(db.String(200))  # "repo_name",
@@ -63,20 +62,39 @@ class GiteaRepository(Repository):
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
 
+    unified_select_statement_template = """
+    select
+        gitea_id as foreign_id,
+        name as name,
+        owner_username as username,
+        description as description,
+        created_at as created_at,
+        updated_at as updated_at,
+        pushed_at as pushed_at,
+        stars_count as stars_count,
+        forks_count as forks_count,
+        private as is_private,
+        fork as is_fork,
+        false as is_archived,
+        false as is_disabled,
+        mirror as is_mirror,
+        website as homepage_url,
+        html_url as repo_url
+    from
+        {TABLE_NAME}
+    where
+        hosting_service_id = {HOSTING_SERVICE_ID}
+    and
+        is_completed = true
+    """
+
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
         owner_username = d["owner"]["username"]
         name = d["name"]
         gitea_id = d["id"]
 
-        repo = cls.query.filter_by(
-            hosting_service_id=hosting_service_id,
-            gitea_id=gitea_id
-        ).first()
-        if not update and not repo:
-            raise Exception("repo not found!")
-        if not repo:
-            repo = cls()
+        repo = cls()
 
         repo.hosting_service_id = hosting_service_id
         repo.gitea_id = gitea_id
@@ -88,6 +106,7 @@ class GiteaRepository(Repository):
         repo.fork = d["fork"]
         repo.mirror = d["mirror"]
         repo.size = d["size"]
+        repo.html_url = d["html_url"]
         repo.website = d["website"]
         repo.stars_count = d["stars_count"]
         repo.forks_count = d["forks_count"]
@@ -111,6 +130,7 @@ class GiteaRepository(Repository):
         repo["fork"] = self.fork
         repo["mirror"] = self.mirror
         repo["size"] = self.size
+        repo["html_url"] = self.html_url
         repo["website"] = self.website
         repo["stars_count"] = self.stars_count
         repo["forks_count"] = self.forks_count
@@ -120,4 +140,3 @@ class GiteaRepository(Repository):
         repo["created_at"] = self.created_at
         repo["updated_at"] = self.updated_at
         return repo
-

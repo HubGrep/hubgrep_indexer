@@ -13,5 +13,6 @@ class DotEnvConfig(Config):
     # (docker internal)
     RESULTS_PATH = os.environ["HUBGREP_RESULTS_PATH"]
     OLD_RUN_AGE = int(os.environ["HUBGREP_OLD_RUN_AGE"])
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     INDEXER_API_KEY = os.environ.get("HUBGREP_INDEXER_API_KEY", None)

@@ -30,30 +30,47 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     repo_class = Repository.repo_class_for_type(hosting_service.type)
     if not repo_class:
-        return jsonify(status="error", msg="unknown repo type"), 500
+        return jsonify(status="error", msg="unknown repo type"), 403
 
     # add repos to the db :)
+    logger.debug(f"adding repos to {hosting_service}")
     before = time.time()
     repo_class = Repository.repo_class_for_type(hosting_service.type)
+    parsed_repos = []
     for repo_dict in repo_dicts:
         try:
             r = repo_class.from_dict(hosting_service_id, repo_dict)
-            db.session.add(r)
+            parsed_repos.append(r)
         except Exception as e:
-            logger.exception("could not parse repo dict")
-            logger.warning(f"{repo_dict}")
+            logger.exception(f"could not parse repo dict for {hosting_service}")
+            logger.warning(f"(skipping) repo dict: {repo_dict}")
+
+    db.session.bulk_save_objects(parsed_repos)
     db.session.commit()
-    logger.debug(f"adding took {time.time() - before}s")
+    logger.debug(f"adding {len(parsed_repos)} repos to {hosting_service} took {time.time() - before}s")
 
     state_helper = get_state_helper(hosting_service.type)
-    run_is_finished = state_helper.resolve_state(
-        hosting_service_id=hosting_service_id,
-        state_manager=state_manager,
-        block_uid=block_uid,
-        repo_dicts=repo_dicts,
-    )
+
+    # will block, if the lock is already aquired, and go on after release
+    with state_manager.get_lock(hosting_service_id):
+        run_is_finished = state_helper.resolve_state(
+            hosting_service_id=hosting_service_id,
+            state_manager=state_manager,
+            block_uid=block_uid,
+            parsed_repos=parsed_repos,
+        )
+    
     if run_is_finished:
-        export = hosting_service.export_repositories()
+        logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
+        repo_class.rotate(hosting_service)
+
+        logger.info(f"{hosting_service}: exporting raw!")
+        export = hosting_service.export_repositories(unified=False)
+        db.session.add(export)
+        db.session.commit()
+
+        logger.info(f"{hosting_service}: exporting unified!")
+        export = hosting_service.export_repositories(unified=True)
         db.session.add(export)
         db.session.commit()
 

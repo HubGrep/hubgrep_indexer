@@ -58,14 +58,17 @@ def create_app():
     from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
 
     from hubgrep_indexer.models.hosting_service import HostingService
+    from hubgrep_indexer.models.export import Export
 
     from hubgrep_indexer.api_blueprint import api
     from hubgrep_indexer.frontend_blueprint import frontend
     from hubgrep_indexer.cli_blueprint import cli_bp
+    from hubgrep_indexer.results_blueprint import results_bp
 
     app.register_blueprint(api)
     app.register_blueprint(frontend)
     app.register_blueprint(cli_bp)
+    app.register_blueprint(results_bp)
     return app
 
 

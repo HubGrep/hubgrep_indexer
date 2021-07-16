@@ -4,7 +4,6 @@ import logging
 from typing import Dict
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
-from sqlalchemy import Index
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
         'created_at': '2016-05-30T04:27:14.463Z',
         'default_branch': 'master',
         'tag_list': [],
+        'topics': ["key-maybe-not-here"]
         'ssh_url_to_repo': 'git@gitlab.com:dedekindbr/ufrrj.git',
         'http_url_to_repo': 'https://gitlab.com/dedekindbr/ufrrj.git',
         'web_url': 'https://gitlab.com/dedekindbr/ufrrj',
@@ -41,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 class GitlabRepository(Repository):
     __tablename__ = "gitlab_repositories"
-    __table_args__ = (Index('repo_ident_index_gitlab', "hosting_service_id", "gitlab_id"), )
 
     gitlab_id = db.Column(db.Integer)  # 'id': 1241825,
     description = db.Column(db.Text)  # 'description': 'Pacote LaTeXe para produção de monografias, dissertações e teses',
@@ -72,6 +71,31 @@ class GitlabRepository(Repository):
                   'avatar_url': 'https://secure.gravatar.com/avatar/ec3a8f5183465a232283493f3de0a80d?s=80&d=identicon',
                   'web_url': 'https://gitlab.com/dedekindbr'}
     """
+    unified_select_statement_template = """
+    select
+        gitlab_id as foreign_id,
+        name as name,
+        user_name as username,
+        description as description,
+        created_at as created_at,
+        last_activity_at as updated_at,
+        last_activity_at as pushed_at,
+        star_count as stars_count,
+        forks_count as forks_count,
+        false as is_private,
+        false as is_fork,
+        false as is_archived,
+        false as is_disabled,
+        false as is_mirror,
+        web_url as homepage_url,
+        http_url_to_repo as repo_url
+    from
+        {TABLE_NAME}
+    where
+        hosting_service_id = {HOSTING_SERVICE_ID}
+    and
+        is_completed = true
+    """
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GitlabRepository":
@@ -79,14 +103,7 @@ class GitlabRepository(Repository):
         name = d['name']
         gitlab_id = d['id']
 
-        repo = cls.query.filter_by(
-            hosting_service_id=hosting_service_id,
-            gitlab_id=gitlab_id
-        ).first()
-        if not update and not repo:
-            raise Exception("repo not found!")
-        if not repo:
-            repo = cls()
+        repo = cls()
 
         repo.hosting_service_id = hosting_service_id
         repo.gitlab_id = gitlab_id

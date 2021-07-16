@@ -8,14 +8,14 @@ logger = logging.getLogger(__name__)
 
 
 class IStateHelper:
-    # maximum of returned callbacks containing no results, before we blind-reset
-    empty_results_max = 5
+    # maximum consecutive returned callbacks containing no results, before we blind-reset
+    empty_results_max = 20
 
     @staticmethod
     def resolve_state(hosting_service_id: str,
                       state_manager: AbstractStateManager,
                       block_uid: str,
-                      repo_dicts: list) -> Union[bool, None]:
+                      parsed_repos: list) -> Union[bool, None]:
         """
         Default implementation for resolving if we have consumed all
         repositories available, and its time to start over.
@@ -25,7 +25,7 @@ class IStateHelper:
         state and start over.
 
         Returns state_manager.get_run_is_finished() OR None
-        - true if we reached end, None if block is unrelated to the current run
+        - true/false if we reached end, None if block is unrelated to the current run
         """
         block = state_manager.get_block(
             hoster_prefix=hosting_service_id, block_uid=block_uid)
@@ -35,50 +35,51 @@ class IStateHelper:
             logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
             return None
         else:
-            run_created_ts = state_manager.get_run_created_ts(
+            is_run_finished = state_manager.get_is_run_finished(
                 hoster_prefix=hosting_service_id)
-            is_block_from_old_run = block.run_created_ts != run_created_ts
-            if is_block_from_old_run:
+            if is_run_finished:
                 logger.info(f"skipping state update for outdated block, uid: {block_uid}")
                 # this Block belongs to an old run, so we avoid touching any state for it
                 return None
 
         state_manager.finish_block(
             hoster_prefix=hosting_service_id, block_uid=block_uid)
-
-        if len(repo_dicts) == 0:
+        if len(parsed_repos) == 0:
             state_manager.increment_empty_results_counter(
                 hoster_prefix=hosting_service_id, amount=1)
+        else:
+            state_manager.set_empty_results_counter(
+                hoster_prefix=hosting_service_id, count=0)
 
+        # check on the effects of the block transaction
         has_reached_end = IStateHelper.has_reached_end(
             hosting_service_id=hosting_service_id,
             state_manager=state_manager,
-            repo_dicts=repo_dicts,
+            parsed_repos=parsed_repos,
             block=block)
         has_too_many_empty = IStateHelper.has_too_many_consecutive_empty_results(
             hosting_service_id=hosting_service_id,
             state_manager=state_manager)
 
         if has_reached_end:
-            logger.info(
-                f'crawler reached end for hoster: {hosting_service_id}')
+            logger.info(f'crawler reached end for hoster: {hosting_service_id}')
             state_manager.finish_run(hoster_prefix=hosting_service_id)
-            return state_manager.get_run_is_finished(hosting_service_id)
         elif has_too_many_empty:
-            logger.info(
-                f'crawler reach max empty results for hoster: {hosting_service_id}')
+            logger.info(f'crawler reach max empty results for hoster: {hosting_service_id}')
             state_manager.finish_run(hoster_prefix=hosting_service_id)
-            return state_manager.get_run_is_finished(hosting_service_id)
         else:
-            # if we hit this branch, we are somewhere in the middle of the hoster.
-            # we just count up our confirmed ids and go on
+            # we are somewhere in the middle of a hosters repos
+            # and we count up our confirmed ids and continue
             if isinstance(block.ids, list) and len(block.ids) > 0:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
+            # TODO before if/else does not take into account if we actually GOT this repo successfully
             state_manager.set_highest_confirmed_repo_id(
                 hoster_prefix=hosting_service_id, repo_id=repo_id)
-            return state_manager.get_run_is_finished(hosting_service_id)
+
+        # finally return and terminate the while loop
+        return state_manager.get_is_run_finished(hosting_service_id)
 
     @staticmethod
     def has_too_many_consecutive_empty_results(
@@ -93,7 +94,7 @@ class IStateHelper:
             hosting_service_id: str,
             state_manager: AbstractStateManager,
             block: Block,
-            repo_dicts: list) -> bool:
+            parsed_repos: list) -> bool:
         """
         Try to find out if we reached the end of repos on this hoster.
 
@@ -112,18 +113,18 @@ class IStateHelper:
         is_confirmed_next = block.to_id == last_block_id
 
         # we dont assume end on partially filled results, only on empty
-        return is_confirmed_next and len(repo_dicts) == 0
+        return is_confirmed_next and len(parsed_repos) == 0
 
 
 class GitHubStateHelper(IStateHelper):
-    empty_results_max = 20
+    empty_results_max = 100
 
     @staticmethod
     def has_reached_end(
             hosting_service_id: str,
             state_manager: AbstractStateManager,
             block: Block,
-            repo_dicts: list) -> bool:
+            parsed_repos: list) -> bool:
         """
         We default to False for GitHub as we receive lots of gaps within results.
         Maybe a whole block contains private

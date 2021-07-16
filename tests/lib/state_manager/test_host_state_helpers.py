@@ -44,7 +44,7 @@ class TestHostStateHelpers:
             hosting_service_id=HOSTER_PREFIX,
             state_manager=state_manager,
             block=new_block,
-            repo_dicts=repos,
+            parsed_repos=repos,
         )
         if hoster_type == HOST_TYPE_GITHUB:
             # github should not assume end on single empty results
@@ -80,7 +80,7 @@ class TestHostStateHelpers:
             hosting_service_id=HOSTER_PREFIX,
             state_manager=state_manager,
             block_uid=old_block.uid,
-            repo_dicts=repos,
+            parsed_repos=repos,
         )
 
         new_block = state_manager.get_next_block(
@@ -129,7 +129,7 @@ class TestHostStateHelpers:
             hosting_service_id=HOSTER_PREFIX,
             state_manager=state_manager,
             block_uid=new_block.uid,
-            repo_dicts=repos,
+            parsed_repos=repos,
         )
 
         blocks = state_manager.get_blocks(hoster_prefix=HOSTER_PREFIX)
@@ -156,7 +156,7 @@ class TestHostStateHelpers:
                 hosting_service_id=HOSTER_PREFIX,
                 state_manager=state_manager,
                 block_uid=_block_uid,
-                repo_dicts=_repos,
+                parsed_repos=_repos,
             )
 
         runs = 10

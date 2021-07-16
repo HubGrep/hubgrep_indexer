@@ -8,13 +8,11 @@ from hubgrep_indexer import db
 
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
-from sqlalchemy import Index
 logger = logging.getLogger(__name__)
 
 
 class GithubRepository(Repository):
     __tablename__ = "github_repositories"
-    __table_args__ = (Index('repo_ident_index_github', "hosting_service_id", "github_id"), )
 
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
@@ -49,6 +47,32 @@ class GithubRepository(Repository):
     license_nickname = db.Column(
         db.String(200))  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
 
+    unified_select_statement_template = """
+    select
+        github_id as foreign_id,
+        name as name,
+        owner_login as username,
+        description as description,
+        created_at as created_at,
+        updated_at as updated_at,
+        pushed_at as pushed_at,
+        stargazer_count as stars_count,
+        fork_count as forks_count,
+        is_private as is_private,
+        is_fork as is_fork,
+        is_archived as is_archived,
+        is_disabled as is_disabled,
+        false as is_mirror,
+        homepage_url as homepage_url,
+        url as repo_url
+    from 
+        {TABLE_NAME}
+    where 
+        hosting_service_id = {HOSTING_SERVICE_ID}
+    and
+        is_completed = true
+    """
+
     @classmethod
     def github_id_from_base64(cls, gql_id: str) -> int:
         """
@@ -65,14 +89,7 @@ class GithubRepository(Repository):
         name = d['name']
         github_id = cls.github_id_from_base64(d['id'])
 
-        repo = cls.query.filter_by(
-            hosting_service_id=hosting_service_id,
-            github_id=github_id
-        ).first()
-        if not update and not repo:
-            raise Exception("repo not found!")
-        if not repo:
-            repo = cls()
+        repo = cls()
 
         repo.hosting_service_id = hosting_service_id
         repo.github_id = github_id
@@ -132,4 +149,4 @@ class GithubRepository(Repository):
         repo["primary_language_name"] = self.primary_language_name
         repo["license_name"] = self.license_name
         repo["license_nickname"] = self.license_nickname
-
+        return repo
