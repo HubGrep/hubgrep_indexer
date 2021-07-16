@@ -41,10 +41,10 @@ def export_repos(hosting_service):
     type=str,
     help="api_url of the hosting service (eg. https://api.github.com/)",
 )
-def cleanup_exports(keep, hosting_service=None):
+def prune_exports(keep, hosting_service=None):
     """
-    remove old exports from the hdd and their references from the db.
-    only keep the last <keep> exports.
+    Remove older export files from the hdd while keeping their metadata db references (ExportMeta) intact.
+    Only keep the last <keep> exports.
     """
     if hosting_service:
         q = HostingService.query.filter_by(api_url=hosting_service)
@@ -65,9 +65,7 @@ def cleanup_exports(keep, hosting_service=None):
         for export in old_exports_raw:
             print(f"deleting export {export}")
             export.delete_file()
-            db.session.delete(export)
         for export in old_exports_unified:
             print(f"deleting export {export}")
             export.delete_file()
-            db.session.delete(export)
         db.session.commit()
