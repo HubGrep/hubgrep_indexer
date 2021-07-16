@@ -1,9 +1,6 @@
 import logging
 from typing import Union
 
-from redis import WatchError
-
-from hubgrep_indexer import RedisStateManager
 from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager, Block
 
@@ -16,7 +13,7 @@ class IStateHelper:
 
     @staticmethod
     def resolve_state(hosting_service_id: str,
-                      state_manager: RedisStateManager,
+                      state_manager: AbstractStateManager,
                       block_uid: str,
                       parsed_repos: list) -> Union[bool, None]:
         """

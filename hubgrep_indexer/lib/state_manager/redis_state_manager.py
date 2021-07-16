@@ -1,7 +1,5 @@
 import time
 import logging
-import traceback
-from typing import Callable
 
 from .abstract_state_manager import AbstractStateManager, Block
 
@@ -18,8 +16,6 @@ class RedisStateManager(AbstractStateManager):
     def __init__(self):
         super().__init__()
         self.redis = redis.from_url("redis://localhost")
-        self._redis = self.redis  # placeholder used for swapping back and forth between pipeline usage
-        self.is_using_pipeline = False
 
         self.run_created_ts_key = "run_created_ts"
         self.block_map_key = "blocks"
@@ -32,9 +28,10 @@ class RedisStateManager(AbstractStateManager):
     @classmethod
     def _get_redis_key(cls, hoster_prefix: str, key: str):
         return f"{hoster_prefix}:{key}"
-    
+
     def get_lock(self, hoster_prefix):
-        lock = self.redis.lock(f"{hoster_prefix}:{self.lock_key}")
+        redis_key = self._get_redis_key(hoster_prefix, self.lock_key)
+        lock = self.redis.lock(redis_key)
         return lock
 
     def set_highest_block_repo_id(self, hoster_prefix: str, repo_id: int):
