@@ -68,4 +68,3 @@ def prune_exports(keep, hosting_service=None):
         for export in old_exports_unified:
             print(f"deleting export {export}")
             export.delete_file()
-        db.session.commit()

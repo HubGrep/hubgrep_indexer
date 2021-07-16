@@ -31,4 +31,7 @@ class ExportMeta(db.Model):
         try:
             os.remove(file_abspath)
         except FileNotFoundError:
-            logger.warning(f"couldnt find {file_abspath} - deleting the db entry")
+            logger.warning(f"(ignoring) could'nt find and delete {file_abspath}")
+
+        self.file_path = None
+        db.session.commit()
