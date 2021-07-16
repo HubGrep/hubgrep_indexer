@@ -1,9 +1,10 @@
 import redislite
 import pytest
+import time
+from multiprocessing import Process
 
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import LocalStateManager, AbstractStateManager
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
-
 
 HOSTER_PREFIX = "hoster_1"
 
@@ -150,23 +151,22 @@ class TestRedisStateManager(TestLocalStateManager):
         yield manager
         manager.reset(hoster_prefix=HOSTER_PREFIX)
 
+    @pytest.mark.timeout(2)
+    def test_get_lock_is_blocking(self, state_manager):
+        """
+        We get a lock in a subprocess which waits before release, during this time we try to get a 2nd lock
+        which should be blocking UNTIL the first lock has released.
 
-    def test_get_lock(self, state_manager):
-        with state_manager.get_lock(1):
-            print("locked!")
-            assert True
+        If it's not released we rely on a pytest timeout to fail the test for us.
+        """
+        def _get_lock(_state_manager, sleep_time: int):
+            with _state_manager.get_lock(1):
+                time.sleep(sleep_time)
 
-        # the same that the contextmanager does
-        lock = state_manager.get_lock(1)
-        lock.acquire(blocking=True)
-
-        lock2 = state_manager.get_lock(1)
-        # second lock blocks forever if not released - no idea how to test
-        #lock2.acquire(blocking=True)
-
-        # release is called when leaving the context
-        lock.release()
-
-
-
-
+        time_blocked = time.time()
+        p = Process(target=_get_lock, args=(state_manager, 1))
+        p.start()
+        time.sleep(0.01)  # this is a bit finicky, delay slightly to end up executing BEHIND the subprocess
+        _get_lock(state_manager, 0)
+        time_blocked = time.time() - time_blocked
+        assert time_blocked > .5
