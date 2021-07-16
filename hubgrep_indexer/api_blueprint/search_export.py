@@ -4,7 +4,7 @@ from flask import jsonify
 import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService
-from hubgrep_indexer.models.hosting_service import Export
+from hubgrep_indexer.models.hosting_service import ExportMeta
 
 from hubgrep_indexer.api_blueprint import api
 

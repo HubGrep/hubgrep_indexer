@@ -9,7 +9,7 @@ from hubgrep_indexer import db
 logger = logging.getLogger(__name__)
 
 
-class Export(db.Model):
+class ExportMeta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     hosting_service = db.relationship("HostingService")
     hosting_service_id = db.Column(

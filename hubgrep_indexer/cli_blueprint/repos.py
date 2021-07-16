@@ -4,7 +4,7 @@ from flask import current_app
 from pathlib import Path
 import logging
 
-from hubgrep_indexer.models.hosting_service import HostingService, Export
+from hubgrep_indexer.models.hosting_service import HostingService, ExportMeta
 
 from hubgrep_indexer.cli_blueprint import cli_bp
 from hubgrep_indexer import db
@@ -52,13 +52,13 @@ def cleanup_exports(keep, hosting_service=None):
         q = HostingService.query
     for hosting_service in q.all():
         old_exports_raw = (
-            Export.query.filter_by(hosting_service_id=hosting_service.id, is_raw=True)
-            .order_by(Export.created_at.desc())
+            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=True)
+            .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
         old_exports_unified = (
-            Export.query.filter_by(hosting_service_id=hosting_service.id, is_raw=False)
-            .order_by(Export.created_at.desc())
+            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=False)
+            .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
 
