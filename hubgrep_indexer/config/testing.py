@@ -10,3 +10,6 @@ class TestingConfig(Config):
     # (docker internal)
     RESULTS_PATH = '/tmp/'
     OLD_RUN_AGE = 3600
+
+    INDEXER_API_KEY = "indexer-api-key"
+    LOGIN_DISABLED = True

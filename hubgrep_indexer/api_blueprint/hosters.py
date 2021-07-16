@@ -1,5 +1,6 @@
 from flask import request
 from flask import jsonify
+from flask_login import login_required
 
 import logging
 
@@ -11,8 +12,8 @@ from hubgrep_indexer.api_blueprint import api
 logger = logging.getLogger(__name__)
 
 
-# todo: needs_auth
 @api.route("/hosters", methods=["GET", "POST"])
+@login_required
 def hosters():
     if request.method == "GET":
         hosting_services = []

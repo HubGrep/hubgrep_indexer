@@ -1,12 +1,9 @@
 import redislite
 import os
 import tempfile
-import logging
-
-import requests
 import pytest
 
-from hubgrep_indexer import create_app, db
+from hubgrep_indexer import create_app
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer import db, state_manager
 
@@ -20,6 +17,7 @@ def test_app(request):
 
     db_fd, file_path = tempfile.mkstemp()
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{file_path}"
+    app.config["INDEXER_API_KEY"] = "indexerapikey"
 
     with app.app_context():
         db.create_all()
