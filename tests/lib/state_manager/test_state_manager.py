@@ -81,11 +81,11 @@ class TestLocalStateManager:
         assert state_manager.get_highest_block_repo_id(HOSTER_PREFIX) == highest_block_id
         assert state_manager.get_highest_confirmed_repo_id(HOSTER_PREFIX) == highest_confirmed_id
         assert state_manager.get_run_created_ts(HOSTER_PREFIX) == created_ts
-        assert state_manager.get_run_is_finished(HOSTER_PREFIX)
+        assert state_manager.get_is_run_finished(HOSTER_PREFIX)
 
     def test_set_run_not_finished(self, state_manager: AbstractStateManager):
-        state_manager.set_run_is_finished(HOSTER_PREFIX, False)
-        assert not state_manager.get_run_is_finished(HOSTER_PREFIX)
+        state_manager.set_is_run_finished(HOSTER_PREFIX, False)
+        assert not state_manager.get_is_run_finished(HOSTER_PREFIX)
 
     def test_run_created_ts(self, state_manager: AbstractStateManager):
         # create a ts for "now"
@@ -149,3 +149,24 @@ class TestRedisStateManager(TestLocalStateManager):
         manager.redis = redislite.Redis()
         yield manager
         manager.reset(hoster_prefix=HOSTER_PREFIX)
+
+
+    def test_get_lock(self, state_manager):
+        with state_manager.get_lock(1):
+            print("locked!")
+            assert True
+
+        # the same that the contextmanager does
+        lock = state_manager.get_lock(1)
+        lock.acquire(blocking=True)
+
+        lock2 = state_manager.get_lock(1)
+        # second lock blocks forever if not released - no idea how to test
+        #lock2.acquire(blocking=True)
+
+        # release is called when leaving the context
+        lock.release()
+
+
+
+
