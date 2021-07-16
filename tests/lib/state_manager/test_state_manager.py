@@ -71,7 +71,7 @@ class TestLocalStateManager:
         highest_confirmed_id = 40
         highest_block_id = 100
         state_manager.set_highest_block_repo_id(HOSTER_PREFIX, highest_block_id)
-        state_manager.set_highest_confirmed_repo_id(HOSTER_PREFIX, highest_confirmed_id)
+        state_manager.set_highest_confirmed_block_repo_id(HOSTER_PREFIX, highest_confirmed_id)
         state_manager.set_run_created_ts(HOSTER_PREFIX, created_ts)
         # False is implied
         # state_manager.set_run_is_finished(HOSTER_PREFIX, False)
@@ -79,7 +79,7 @@ class TestLocalStateManager:
         state_manager.finish_run(HOSTER_PREFIX)
 
         assert state_manager.get_highest_block_repo_id(HOSTER_PREFIX) == highest_block_id
-        assert state_manager.get_highest_confirmed_repo_id(HOSTER_PREFIX) == highest_confirmed_id
+        assert state_manager.get_highest_confirmed_block_repo_id(HOSTER_PREFIX) == highest_confirmed_id
         assert state_manager.get_run_created_ts(HOSTER_PREFIX) == created_ts
         assert state_manager.get_is_run_finished(HOSTER_PREFIX)
 
@@ -119,7 +119,7 @@ class TestLocalStateManager:
         old_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
         old_run_created_ts = state_manager.get_run_created_ts(
             hoster_prefix=HOSTER_PREFIX)
-        state_manager.set_highest_confirmed_repo_id(
+        state_manager.set_highest_confirmed_block_repo_id(
             hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_confirmed_id)
         state_manager.set_highest_block_repo_id(
             hoster_prefix=HOSTER_PREFIX, repo_id=old_highest_block_id)
@@ -127,7 +127,7 @@ class TestLocalStateManager:
         new_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
 
         # test that our setup took effect (old block is gone, only new one left)
-        new_highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(
+        new_highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
             hoster_prefix=HOSTER_PREFIX)
         new_highest_block_id = state_manager.get_highest_block_repo_id(
             hoster_prefix=HOSTER_PREFIX)

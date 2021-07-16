@@ -74,8 +74,7 @@ class IStateHelper:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
-            # TODO before if/else does not take into account if we actually GOT this repo successfully
-            state_manager.set_highest_confirmed_repo_id(
+            state_manager.set_highest_confirmed_block_repo_id(
                 hoster_prefix=hosting_service_id, repo_id=repo_id)
 
         # finally return and terminate the while loop
@@ -103,7 +102,7 @@ class IStateHelper:
         """
 
         # get the highest repo id we have seen
-        highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(
+        highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
             hoster_prefix=hosting_service_id)
 
         # get end of the block behind the last confirmed one
