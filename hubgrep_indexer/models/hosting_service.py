@@ -76,8 +76,6 @@ class HostingService(db.Model):
 
         returns `Export` (needs to be commited to the db!)
         """
-        repo_count = self.count_repos()
-
         now = datetime.datetime.now()
         if not export_filename:
             export_filename = self._get_default_export_filename(now, unified)
@@ -89,6 +87,7 @@ class HostingService(db.Model):
             repo_class.export_csv_gz(self.id, self.type, export_filename)
         else:
             repo_class.export_unified_csv_gz(self.id, self.type, export_filename)
+        repo_count = self.count_repos()
         logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
 
         export = Export()
@@ -165,7 +164,7 @@ class HostingService(db.Model):
         # fast counting: https://gist.github.com/hest/8798884
         return db.session.execute(
             db.session.query(repo_class)
-            .filter_by(hosting_service_id=self.id)
+            .filter_by(hosting_service_id=self.id, is_completed=True)
             .statement.with_only_columns([func.count()])
             .order_by(None)
         ).scalar()

@@ -4,7 +4,6 @@ import logging
 from typing import Dict
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
-from sqlalchemy import Index
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +92,8 @@ class GitlabRepository(Repository):
         {TABLE_NAME}
     where
         hosting_service_id = {HOSTING_SERVICE_ID}
+    and
+        is_completed = true
     """
 
     @classmethod
