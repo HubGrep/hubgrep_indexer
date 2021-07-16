@@ -101,7 +101,10 @@ class Repository(db.Model):
         if not select_statement_template:
             select_statement_template = """
             select * from {TABLE_NAME}
-            where hosting_service_id = {HOSTING_SERVICE_ID}
+            where 
+                hosting_service_id = {HOSTING_SERVICE_ID}
+            and
+                is_completed = true
             """
         select_statement = select_statement_template.format(
             TABLE_NAME=repo_class.__tablename__,
