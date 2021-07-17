@@ -1,15 +1,15 @@
+import time
+import logging
 from flask import jsonify
 from flask_login import login_required
 
-import logging
-
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
+from hubgrep_indexer.api_blueprint import api
 from hubgrep_indexer.lib.block_helpers import (
     get_block_for_crawler,
     get_loadbalanced_block_for_crawler,
 )
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import Block
-
-from hubgrep_indexer.api_blueprint import api
+from hubgrep_indexer.models.hosting_service import HostingService
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 @api.route("/hosters/<type>/loadbalanced_block")
 @login_required
 def get_loadbalanced_block(type: str):
+    ts_before = time.time()
     block_dict = get_loadbalanced_block_for_crawler(type)
+    logger.debug(f"got a load-balanced block - took {time.time() - ts_before}s")
 
     if not block_dict:
         return jsonify(Block.get_sleep_dict())
@@ -29,7 +31,10 @@ def get_loadbalanced_block(type: str):
 @api.route("/hosters/<hosting_service_id>/block", methods=['GET'])
 @login_required
 def get_block(hosting_service_id: int):
-    block_dict = get_block_for_crawler(hosting_service_id)
+    ts_before = time.time()
+    hosting_service = HostingService.query.get(hosting_service_id)
+    block_dict = get_block_for_crawler(hosting_service.id)
+    logger.debug(f"got a block for {hosting_service} - took {time.time() - ts_before}s")
 
     if not block_dict:
         return jsonify(Block.get_sleep_dict())
