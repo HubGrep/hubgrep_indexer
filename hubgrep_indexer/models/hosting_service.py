@@ -14,7 +14,7 @@ from flask import current_app
 
 from hubgrep_indexer import db
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
-from hubgrep_indexer.models.export import Export
+from hubgrep_indexer.models.export_meta import ExportMeta
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ class HostingService(db.Model):
         shorthand for the query to this hosters exports, sorted by datetime
         (newest first)
         """
-        query = Export.query.filter_by(hosting_service_id=self.id, is_raw=(not unified))
-        query.order_by(Export.created_at.desc())
+        query = ExportMeta.query.filter_by(hosting_service_id=self.id, is_raw=(not unified))
+        query.order_by(ExportMeta.created_at.desc())
 
         results_base_url = current_app.config["RESULTS_BASE_URL"]
         exports = []
@@ -90,7 +90,7 @@ class HostingService(db.Model):
         repo_count = self.count_repos()
         logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
 
-        export = Export()
+        export = ExportMeta()
         export.created_at = now
         export.file_path = export_filename
         export.hosting_service_id = self.id
