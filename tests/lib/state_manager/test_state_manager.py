@@ -170,3 +170,22 @@ class TestRedisStateManager(TestLocalStateManager):
         _get_lock(state_manager, 0)
         time_blocked = time.time() - time_blocked
         assert time_blocked > .5
+
+    def test_get_lock_is_blocking_2(self, state_manager):
+        """
+        a less fancy test, if the lock works
+
+        """
+        # get a lock, and aquire it
+        with state_manager.get_lock(5):
+
+            # get a second lock (unaquired)
+            lock = state_manager.get_lock(5)
+            # check if its locked, without using it
+            # (should be locked here)
+            assert lock.locked()
+        
+        # get a second one, should be unlocked now
+        lock = state_manager.get_lock(5)
+        assert not lock.locked()
+
