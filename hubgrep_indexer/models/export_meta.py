@@ -19,7 +19,7 @@ class ExportMeta(db.Model):
     is_raw = db.Column(db.Boolean, nullable=True)
 
     created_at = db.Column(db.DateTime(), nullable=False)
-    file_path = db.Column(db.String(500), nullable=False)
+    file_path = db.Column(db.String(500), nullable=True)  # indicating that the file has likely been removed
 
     repo_count = db.Column(db.Integer, nullable=True)
 
@@ -31,4 +31,7 @@ class ExportMeta(db.Model):
         try:
             os.remove(file_abspath)
         except FileNotFoundError:
-            logger.warning(f"couldnt find {file_abspath} - deleting the db entry")
+            logger.warning(f"(ignoring) could'nt find and delete {file_abspath}")
+
+        self.file_path = None
+        db.session.commit()
