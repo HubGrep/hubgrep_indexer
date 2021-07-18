@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build-and-test:
     docker:
-      image: postgres:13
+      - image: postgres:13
     environment:
       POSTGRES_USER: hubgrep
       POSTGRES_PASSWORD: hubgrep
