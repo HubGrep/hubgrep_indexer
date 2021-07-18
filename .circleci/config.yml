@@ -10,9 +10,8 @@ jobs:
     steps:
       - checkout
       - run: touch .env
-      - run: docker-compose up -d test_postgres
-      - run: sleep 30
-      - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
+      - run: docker-compose up -d
+      - run: docker-compose run hubgrep_indexer bash -c "./manage.sh test"
 
 
 

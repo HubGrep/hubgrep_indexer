@@ -7,12 +7,16 @@ services:
     env_file: .env
     volumes:
       - /tmp:/tmp
+    healthcheck:
+      test: "exit 0"
     networks:
       - hubgrep_indexer
 
   postgres:
     image: postgres:13
     env_file: .env
+    healthcheck:
+      test: "exit 0"
     networks:
       - hubgrep_indexer
 
@@ -36,6 +40,12 @@ services:
       - 8081:8080
 
     env_file: .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      test_postgres:
+        condition: service_healthy
 
     command: >
           bash -ic " \
