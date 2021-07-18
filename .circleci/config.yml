@@ -3,6 +3,8 @@ version: 2.1
 jobs:
   build-and-test:
     machine: true
+    environment:
+      HUBGREP_TEST_SQLALCHEMY_DATABASE_URI: postgresql://hubgrep:hubgrep@test_postgres:5432/hubgrep
     steps:
       - checkout
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
