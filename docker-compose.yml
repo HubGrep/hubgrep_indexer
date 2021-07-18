@@ -29,7 +29,7 @@ services:
     - ./:/var/task
     - ./results:/var/results
 
-    restart: ${RESTART}
+    restart: unless-stopped
 
     # uplink port to host
     ports:
