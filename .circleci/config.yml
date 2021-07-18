@@ -1,9 +1,8 @@
 version: 2.1
 
 jobs:
-  build:
   build-and-test:
-    machine:
+    docker:
       image: postgres:13
     environment:
       POSTGRES_USER: hubgrep
