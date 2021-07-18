@@ -13,19 +13,6 @@ services:
     networks:
       - hubgrep_indexer
 
-  postgres:
-    image: postgres:13
-    env_file: .env
-    networks:
-      - hubgrep_indexer
-
-  redis:
-    image: redis
-    ports:
-      - 6379:6379
-    networks:
-      - hubgrep_indexer
-
   hubgrep_indexer:
     build: .
     volumes:
@@ -48,10 +35,7 @@ services:
     tty: true
     networks:
       - hubgrep_indexer
-      - hubgrep
 
 
 networks:
   hubgrep_indexer:
-  hubgrep:
-    name: hubgrep
