@@ -98,9 +98,9 @@ class GiteaRepository(Repository):
 
         repo.hosting_service_id = hosting_service_id
         repo.gitea_id = gitea_id
-        repo.name = name
-        repo.owner_username = owner_username
-        repo.description = d["description"]
+        repo.name = cls.clean_string(name)
+        repo.owner_username = cls.clean_string(owner_username)
+        repo.description = cls.clean_string(d["description"])
         repo.empty = d["empty"]
         repo.private = d["private"]
         repo.fork = d["fork"]
