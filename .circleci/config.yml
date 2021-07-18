@@ -1,6 +1,16 @@
 version: 2.1
 
 jobs:
+  start-db:
+    machine: true
+    environment:
+      POSTGRES_USER: hubgrep
+      POSTGRES_PASSWORD: hubgrep
+      POSTGRES_DB: hubgrep
+    steps:
+      - checkout
+      - run: touch .env
+      - run: docker-compose up test_postgres
   build-and-test:
     machine: true
     environment:
@@ -10,7 +20,7 @@ jobs:
     steps:
       - checkout
       - run: touch .env
-      - run: docker-compose up -d test_postgres && docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
+      - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
     
 
@@ -18,4 +28,5 @@ jobs:
 workflows:
   main:
     jobs:
+      - start-db
       - build-and-test
