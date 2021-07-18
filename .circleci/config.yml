@@ -11,6 +11,7 @@ jobs:
       - checkout
       - run: touch .env
       - run: docker-compose up -d
+      - run: sleep 30
       - run: docker-compose run hubgrep_indexer bash -c "./manage.sh test"
 
 
