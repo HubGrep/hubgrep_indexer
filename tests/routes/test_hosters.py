@@ -31,7 +31,7 @@ class TestHosters:
 
         hosting_service = HostingService()
 
-        hosting_service.api_key = api_key
+        hosting_service.api_keys = [api_key]
         hosting_service.api_url = api_url
         hosting_service.landingpage_url = landingpage_url
         hosting_service.type = "github"
@@ -40,4 +40,4 @@ class TestHosters:
 
         response = test_client.get("/api/v1/hosters")
         assert response.json[0]['api_url'] == api_url
-        assert response.json[0]['request_headers']['access_token'] == api_key
+        assert response.json[0]['api_key'] == api_key

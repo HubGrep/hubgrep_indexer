@@ -2,6 +2,14 @@ version: "2"
 
 services:
 
+  test_postgres:
+    image: postgres:13
+    env_file: .env
+    volumes:
+      - /tmp:/tmp
+    networks:
+      - hubgrep_indexer
+
   postgres:
     image: postgres:13
     env_file: .env
