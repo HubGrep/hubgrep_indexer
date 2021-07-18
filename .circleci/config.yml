@@ -10,6 +10,7 @@ jobs:
     steps:
       - checkout
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
+      - run: touch .env
       - run: docker-compose up -d test_postgres
       - run: docker run --rm hubgrep_indexer:test /bin/bash -c "./manage.sh test"
 
