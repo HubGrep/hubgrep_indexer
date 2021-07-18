@@ -39,8 +39,14 @@ class Repository(db.Model):
 
     @classmethod
     def clean_string(cls, string: Union[str, None]):
+        """
+        clean strings for text fields before saving them to the db
+        """
         if string:
-            # https://stackoverflow.com/a/61958678
+            # postgres was throwing
+            # `ValueError: A string literal cannot contain NUL (0x00) characters.`
+            # since the NUL byte was part of some random description.
+            # we follow the suggestion from https://stackoverflow.com/a/61958678
             string = string.replace("\x00", "\uFFFD")
         return string
 
