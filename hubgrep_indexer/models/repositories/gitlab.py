@@ -107,12 +107,12 @@ class GitlabRepository(Repository):
 
         repo.hosting_service_id = hosting_service_id
         repo.gitlab_id = gitlab_id
-        repo.name = name
-        repo.user_name = user_name
-        repo.description = d["description"]
-        repo.name_with_namespace = d["name_with_namespace"]
-        repo.path = d["path"]
-        repo.path_with_namespace = d["path_with_namespace"]
+        repo.name = cls.clean_string(name)
+        repo.user_name = cls.clean_string(user_name)
+        repo.description = cls.clean_string(d["description"])
+        repo.name_with_namespace = cls.clean_string(d["name_with_namespace"])
+        repo.path = cls.clean_string(d["path"])
+        repo.path_with_namespace = cls.clean_string(d["path_with_namespace"])
         repo.created_at = iso8601.parse_date(d["created_at"])
         repo.last_activity_at = iso8601.parse_date(d["last_activity_at"])
         repo.default_branch = d.get("default_branch", None)

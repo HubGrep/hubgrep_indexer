@@ -93,7 +93,7 @@ class GithubRepository(Repository):
 
         repo.hosting_service_id = hosting_service_id
         repo.github_id = github_id
-        repo.name = name
+        repo.name = cls.clean_string(name)
         repo.homepage_url = d['homepageUrl']
         repo.url = d['url']
         repo.created_at = iso8601.parse_date(d['createdAt'])
@@ -102,8 +102,8 @@ class GithubRepository(Repository):
             repo.pushed_at = iso8601.parse_date(d['pushedAt'])
         else:
             repo.pushed_at = None
-        repo.short_description_html = d['shortDescriptionHTML']
-        repo.description = d['description']
+        repo.short_description_html = cls.clean_string(d['shortDescriptionHTML'])
+        repo.description = cls.clean_string(d['description'])
         repo.is_archived = d['isArchived']
         repo.is_private = d['isPrivate']
         repo.is_fork = d['isFork']
@@ -114,7 +114,7 @@ class GithubRepository(Repository):
         repo.stargazer_count = d['stargazerCount']
         repo.fork_count = d['forkCount']
         repo.disk_usage = d['diskUsage']
-        repo.owner_login = owner_login
+        repo.owner_login = cls.clean_string(owner_login)
         if isinstance(d['primaryLanguage'], dict):
             repo.primary_language_name = d['primaryLanguage'].get('name', None)
         if isinstance(d['licenseInfo'], dict):
