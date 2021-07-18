@@ -12,6 +12,7 @@ jobs:
       - run: touch .env
       - run: docker-compose up -d
       - run: sleep 30
+      - run: docker ps -a
       - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
 
