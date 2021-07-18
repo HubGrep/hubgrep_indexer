@@ -12,7 +12,7 @@ jobs:
       - run: docker build -f Dockerfile.prod -t hubgrep_indexer:test .
       - run: touch .env
       - run: docker-compose up -d test_postgres
-      - run: docker-compose run hubgrep_indexer bash -c ""pip install -r requirements.txt && ./manage.sh test""
+      - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
     
 
