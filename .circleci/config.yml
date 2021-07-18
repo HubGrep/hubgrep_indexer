@@ -4,7 +4,7 @@ jobs:
   build:
   build-and-test:
     machine:
-      - image: postgres:13
+      image: postgres:13
     environment:
       POSTGRES_USER: hubgrep
       POSTGRES_PASSWORD: hubgrep
