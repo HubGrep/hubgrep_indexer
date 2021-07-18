@@ -53,5 +53,4 @@ services:
 
 networks:
   hubgrep_indexer:
-  hubgrep:
-    name: hubgrep
+  hubgrep: hubgrep
