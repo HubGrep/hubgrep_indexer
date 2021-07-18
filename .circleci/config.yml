@@ -2,8 +2,7 @@ version: 2.1
 
 jobs:
   build-and-test:
-    docker:
-      - image: postgres:13
+    machine: true
     environment:
       POSTGRES_USER: hubgrep
       POSTGRES_PASSWORD: hubgrep
@@ -12,6 +11,7 @@ jobs:
       - checkout
       - run: touch .env
       - run: docker-compose up -d test_postgres
+      - run: sleep 5
       - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
 
