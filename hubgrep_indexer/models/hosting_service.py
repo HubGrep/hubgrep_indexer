@@ -97,7 +97,7 @@ class HostingService(db.Model):
         export.is_raw = not unified
         return export
 
-    def get_extra_headers(self):
+    def get_crawler_request_headers(self):
         """
         get crawler request headers for this service
         """
@@ -139,7 +139,7 @@ class HostingService(db.Model):
                 api_key = self.api_keys[0]
 
             d["api_key"] = api_key
-            d["extra_headers"] = self.get_extra_headers()
+            d["crawler_request_headers"] = self.get_crawler_request_headers()
         return d
 
     @classmethod
