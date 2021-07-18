@@ -6,7 +6,7 @@ jobs:
     steps:
       - checkout
       - run: touch .env
-      - run: docker-compose run -d test_postgres
+      - run: docker-compose up -d
       - run: docker-compose run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
 
