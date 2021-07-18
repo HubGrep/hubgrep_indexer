@@ -32,7 +32,7 @@ services:
       - ./:/var/task
       - ./results:/var/results
 
-    restart: unless-stopped
+    restart: "${RESTART:-no}"
 
     # uplink port to host
     ports:
@@ -54,3 +54,4 @@ services:
 networks:
   hubgrep_indexer:
   hubgrep:
+    name: hubgrep
