@@ -25,6 +25,10 @@ def import_hosters(json_path):
         hoster_dicts = json.loads(f.read())
 
         for hoster in hoster_dicts:
+            # TODO be backwards compatible, for now - delete this condition after updating our prod hosters
+            if "api_key" in hoster and "api_keys" not in hoster:
+                hoster["api_keys"] = [hoster["api_key"]]
+
             try:
                 hosting_service = HostingService.from_dict(hoster)
                 if not HostingService.query.filter_by(

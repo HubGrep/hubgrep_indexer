@@ -7,6 +7,7 @@ import logging
 import datetime
 from typing import List, Dict
 
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import ResultProxy
 from sqlalchemy import func
 
@@ -26,10 +27,8 @@ class HostingService(db.Model):
     # main instance website
     landingpage_url = db.Column(db.String(500))
 
-    # should this be unique, or can we use it to store multiple
-    # api keys for a backend?
     api_url = db.Column(db.String(500), unique=True, nullable=False)
-    api_key = db.Column(db.String(500), nullable=True)
+    api_keys = db.Column(ARRAY(db.String(500)), nullable=True)
 
     def __str__(self):
         return f"<{self.type}-{self.id}@{self.hoster_name}>"
@@ -98,22 +97,22 @@ class HostingService(db.Model):
         export.is_raw = not unified
         return export
 
-    def get_request_headers(self):
+    def get_extra_headers(self):
         """
-        get request headers for this service
-
-        todo:
-            discuss: does this belong to the crawler?
+        get crawler request headers for this service
         """
+        headers = dict()
+        # TODO append hoster specific headers when required/found
         if self.type == "github":
-            return dict(access_token=self.api_key)
+            pass
         elif self.type == "gitea":
-            return {}
+            pass
         elif self.type == "gitlab":
-            return {"PRIVATE-TOKEN": self.api_key}
+            pass
         else:
             logger.error(f"unknown hoster {self.type}!")
-            return {}
+        return headers
+
 
     def get_service_label(self):
         return re.split("//", self.landingpage_url)[1].rstrip("/")
@@ -124,7 +123,6 @@ class HostingService(db.Model):
 
         includes the result url, and things we might want to have in an api later.
         """
-
         d = dict(
             id=self.id,
             type=self.type,
@@ -135,8 +133,13 @@ class HostingService(db.Model):
             exports_unified=self.get_exports_dict(unified=True),
         )
         if include_secrets:
-            d["api_key"] = self.api_key
-            d["request_headers"] = self.get_request_headers()
+            # TODO cycle between keys!
+            api_key = None
+            if self.api_keys and len(self.api_keys) > 0:
+                api_key = self.api_keys[0]
+
+            d["api_key"] = api_key
+            d["extra_headers"] = self.get_extra_headers()
         return d
 
     @classmethod
@@ -145,7 +148,7 @@ class HostingService(db.Model):
         hosting_service.type = d["type"]
         hosting_service.landingpage_url = d["landingpage_url"]
         hosting_service.api_url = d["api_url"]
-        hosting_service.api_key = d.get("api_key", "")
+        hosting_service.api_keys = d.get("api_keys", [])
 
         return hosting_service
 
