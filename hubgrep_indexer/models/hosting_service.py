@@ -133,7 +133,7 @@ class HostingService(db.Model):
             exports_unified=self.get_exports_dict(unified=True),
         )
         if include_secrets:
-            # TODO cycle between keys!
+            # TODO cycle between keys! but not here directly, we need to keep track via redis_state_manager
             api_key = None
             if self.api_keys and len(self.api_keys) > 0:
                 api_key = self.api_keys[0]
