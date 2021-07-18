@@ -2,7 +2,7 @@ version: 2.1
 
 jobs:
   build-and-test:
-    setup_remote_docker: true
+    executor: setup_remote_docker
     environment:
       POSTGRES_USER: hubgrep
       POSTGRES_PASSWORD: hubgrep
