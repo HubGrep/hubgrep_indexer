@@ -49,3 +49,7 @@ class TestGithubRepository:
             assert GithubRepository.query.count() == 1
             assert repo.github_id == 17558226
 
+    def test_clean_string(self):
+        assert GithubRepository.clean_string("\x00test") == "\uFFFDtest"
+        assert GithubRepository.clean_string(None) == None
+        assert GithubRepository.clean_string("test") == "test"
