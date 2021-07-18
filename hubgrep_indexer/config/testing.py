@@ -5,7 +5,7 @@ from hubgrep_indexer.config import Config
 class TestingConfig(Config):
     TESTING = True
     REDIS_URL = 'redis://redis/1'
-    SQLALCHEMY_DATABASE_URI = os.environ.get("HUBGREP_TEST_SQLALCHEMY_DATABASE_URI", False)
+    SQLALCHEMY_DATABASE_URI = "postgresql://hubgrep:hubgrep@test_postgres:5432/hubgrep"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SERVER_NAME = 'testserver'
