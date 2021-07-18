@@ -4,7 +4,10 @@ services:
 
   test_postgres:
     image: postgres:13
-    env_file: .env
+    environment:
+      POSTGRES_USER: hubgrep
+      POSTGRES_PASSWORD: hubgrep
+      POSTGRES_DB: hubgrep
     volumes:
       - /tmp:/tmp
     networks:
@@ -26,8 +29,8 @@ services:
   hubgrep_indexer:
     build: .
     volumes:
-    - ./:/var/task
-    - ./results:/var/results
+      - ./:/var/task
+      - ./results:/var/results
 
     restart: unless-stopped
 
@@ -38,10 +41,10 @@ services:
     env_file: .env
 
     command: >
-          bash -ic " \
-            pip install -r requirements.txt
-            flask run --host 0.0.0.0 --port 8080
-            "
+      bash -ic " \
+        pip install -r requirements.txt
+        flask run --host 0.0.0.0 --port 8080
+        "
     tty: true
     networks:
       - hubgrep_indexer

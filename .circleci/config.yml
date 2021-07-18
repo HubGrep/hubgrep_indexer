@@ -3,11 +3,6 @@ version: 2.1
 jobs:
   build-and-test:
     machine: true
-    environment:
-      SECRET_KEY: supersecret
-      POSTGRES_USER: hubgrep
-      POSTGRES_PASSWORD: hubgrep
-      POSTGRES_DB: hubgrep
     steps:
       - checkout
       - run: touch .env
