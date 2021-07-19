@@ -20,7 +20,7 @@ class RedisStateManager(AbstractStateManager):
         self.run_created_ts_key = "run_created_ts"
         self.block_map_key = "blocks"
         self.highest_block_repo_id_key = "highest_block_repo_id"
-        self.highest_confirmed_repo_id_key = "highest_confirmed_repo_id"
+        self.highest_confirmed_block_repo_id_key = "highest_confirmed_block_repo_id"
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
         self.lock_key = "lock"
@@ -47,12 +47,12 @@ class RedisStateManager(AbstractStateManager):
             highest_repo_id = int(highest_repo_id_str)
         return highest_repo_id
 
-    def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id: int):
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_repo_id_key)
+    def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id: int):
+        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
         self.redis.set(redis_key, repo_id)
 
-    def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_repo_id_key)
+    def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
+        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
         repo_id_str: str = self.redis.get(redis_key)
         if not repo_id_str:
             highest_repo_id = 0

@@ -32,7 +32,7 @@ class TestHostStateHelpers:
         print(f"testing for: {hoster_type}")
         # init state for a already completed block
         old_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
-        state_manager.set_highest_confirmed_repo_id(
+        state_manager.set_highest_confirmed_block_repo_id(
             hoster_prefix=HOSTER_PREFIX, repo_id=old_block.to_id
         )
         state_manager.finish_block(hoster_prefix=HOSTER_PREFIX, block_uid=old_block.uid)
@@ -89,7 +89,7 @@ class TestHostStateHelpers:
         new_run_created_ts = state_manager.get_run_created_ts(
             hoster_prefix=HOSTER_PREFIX
         )
-        new_highest_confirmed_id = state_manager.get_highest_confirmed_repo_id(
+        new_highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
             hoster_prefix=HOSTER_PREFIX
         )
         new_highest_block_id = state_manager.get_highest_block_repo_id(
@@ -111,7 +111,7 @@ class TestHostStateHelpers:
         print(f"testing for: {hoster_type}")
         # init with an old block state (attempt to raise side-effects to fail this test, if we introduce them)
         old_block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
-        state_manager.set_highest_confirmed_repo_id(
+        state_manager.set_highest_confirmed_block_repo_id(
             hoster_prefix=HOSTER_PREFIX, repo_id=old_block.to_id
         )
         state_manager.finish_block(hoster_prefix=HOSTER_PREFIX, block_uid=old_block.uid)

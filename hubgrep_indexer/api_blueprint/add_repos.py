@@ -34,7 +34,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     # add repos to the db :)
     logger.debug(f"adding repos to {hosting_service}")
-    before = time.time()
+    ts_db_start = time.time()
     repo_class = Repository.repo_class_for_type(hosting_service.type)
     parsed_repos = []
     for repo_dict in repo_dicts:
@@ -47,7 +47,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     db.session.bulk_save_objects(parsed_repos)
     db.session.commit()
-    logger.debug(f"adding {len(parsed_repos)} repos to {hosting_service} took {time.time() - before}s")
+    ts_db_end = time.time()
+    logger.debug(f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s")
 
     state_helper = get_state_helper(hosting_service.type)
 
@@ -59,10 +60,14 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
             block_uid=block_uid,
             parsed_repos=parsed_repos,
         )
+    ts_state_end = time.time()
+    logger.debug(f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s")
     
     if run_is_finished:
         logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
         repo_class.rotate(hosting_service)
+        ts_rotate_end = time.time()
+        logger.debug(f"rotated repos for {hosting_service} - took {ts_rotate_end - ts_state_end}s")
 
         logger.info(f"{hosting_service}: exporting raw!")
         export = hosting_service.export_repositories(unified=False)
@@ -73,5 +78,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         export = hosting_service.export_repositories(unified=True)
         db.session.add(export)
         db.session.commit()
+
+        ts_export_end = time.time()
+        logger.debug(f"exported repos for {hosting_service} - took {ts_export_end - ts_rotate_end}s")
 
     return jsonify(dict(status="ok")), 200

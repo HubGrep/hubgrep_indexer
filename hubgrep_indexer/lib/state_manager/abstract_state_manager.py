@@ -89,7 +89,7 @@ class AbstractStateManager:
     def get_state_dict(self, hoster_prefix: str) -> Dict:
         return dict(
             highest_block_repo_id=self.get_highest_block_repo_id(hoster_prefix),
-            highest_confirmed_repo_id=self.get_highest_confirmed_repo_id(hoster_prefix),
+            highest_confirmed_repo_id=self.get_highest_confirmed_block_repo_id(hoster_prefix),
             empty_results_count=self.get_empty_results_counter(hoster_prefix),
             run_created_ts=self.get_run_created_ts(hoster_prefix),
             run_is_finished=self.get_is_run_finished(hoster_prefix),
@@ -109,14 +109,14 @@ class AbstractStateManager:
         """
         raise NotImplementedError
 
-    def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
+    def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
         """
         The highest (last) repo_id we have received from crawlers,
         guaranteeing its existence.
         """
         raise NotImplementedError
 
-    def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id):
+    def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id):
         """
         The highest (last) repo_id we have received from crawlers,
         guaranteeing its existence.
@@ -179,7 +179,7 @@ class AbstractStateManager:
         self.set_run_created_ts(hoster_prefix, None)
         self.set_is_run_finished(hoster_prefix, False)
         self.set_highest_block_repo_id(hoster_prefix, 0)
-        self.set_highest_confirmed_repo_id(hoster_prefix, 0)
+        self.set_highest_confirmed_block_repo_id(hoster_prefix, 0)
         self.set_empty_results_counter(hoster_prefix, 0)
         self._reset_blocks(hoster_prefix)
 
@@ -287,10 +287,10 @@ class LocalStateManager(AbstractStateManager):
         block = hoster_blocks.pop(block_uid)
         return block
 
-    def set_highest_confirmed_repo_id(self, hoster_prefix: str, repo_id: int):
+    def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id: int):
         self.highest_confirmed_repo_ids[hoster_prefix] = repo_id
 
-    def get_highest_confirmed_repo_id(self, hoster_prefix: str) -> int:
+    def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
         if not self.highest_confirmed_repo_ids.get(hoster_prefix, False):
             self.highest_confirmed_repo_ids[hoster_prefix] = 0
         return self.highest_confirmed_repo_ids[hoster_prefix]

@@ -7,6 +7,8 @@ import logging
 import gzip
 from pathlib import Path
 
+from typing import Union
+
 from flask import current_app
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -34,6 +36,19 @@ class Repository(db.Model):
         return db.Column(
             db.Integer, db.ForeignKey("hosting_service.id"), nullable=False
         )
+
+    @classmethod
+    def clean_string(cls, string: Union[str, None]):
+        """
+        clean strings for text fields before saving them to the db
+        """
+        if string:
+            # postgres was throwing
+            # `ValueError: A string literal cannot contain NUL (0x00) characters.`
+            # since the NUL byte was part of some random description.
+            # we follow the suggestion from https://stackoverflow.com/a/61958678
+            string = string.replace("\x00", "\uFFFD")
+        return string
 
     @declared_attr
     def hosting_service(cls):

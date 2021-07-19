@@ -46,10 +46,10 @@ def _get_block_dict(hosting_service_id) -> Dict:
     return block_dict
 
 
-def get_block_for_crawler(hoster_id) -> Dict:
-    state = state_manager.get_state_dict(hoster_id)
+def get_block_for_crawler(hosting_service_id) -> Dict:
+    state = state_manager.get_state_dict(hoster_prefix=hosting_service_id)
     if _state_is_too_old(state):
-        return _get_block_dict(hoster_id)
+        return _get_block_dict(hosting_service_id)
     return None
 
 
@@ -71,7 +71,7 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     hoster_id_state = {}
     for hosting_service in HostingService.query.filter_by(type=type).all():
         hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
-            hosting_service.id
+            hoster_prefix=hosting_service.id
         )
 
     # remove everything finished recently
