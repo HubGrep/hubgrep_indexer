@@ -4,13 +4,12 @@ helpers to generate block dicts for the crawlers
 
 import logging
 import time
-
-from typing import Dict
-
-from flask import url_for
+from typing import Dict, Union
+from flask import request
 from flask import current_app
 
 from hubgrep_indexer import state_manager
+from hubgrep_indexer.constants import BLOCK_STATUS_READY
 from hubgrep_indexer.models.hosting_service import HostingService
 
 logger = logging.getLogger(__name__)
@@ -31,29 +30,40 @@ def _get_block_dict(hosting_service_id) -> Dict:
         block = timed_out_block
     else:
         block = state_manager.get_next_block(hosting_service_id)
-    block_dict = block.to_dict()
 
     hosting_service = HostingService.query.get(hosting_service_id)
     logger.info(f"getting block for {hosting_service}")
 
-    block_dict["crawler"] = hosting_service.to_dict(include_secrets=True)
-    block_dict["callback_url"] = url_for(
-        "api.add_repos",
-        hosting_service_id=hosting_service.id,
-        block_uid=block_dict["uid"],
-        _external=True,
-    )
-    return block_dict
+    api_key = resolve_api_key(hosting_service=hosting_service)
+    block.hosting_service = hosting_service.to_dict(include_secrets=True, api_key=api_key)
+
+    if block.status != BLOCK_STATUS_READY:
+        logger.warning(f'expected block status "{BLOCK_STATUS_READY}" - block "{block}"')
+
+    return block.to_dict()
 
 
-def get_block_for_crawler(hosting_service_id) -> Dict:
+def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
+
+    crawler_uuid = request.headers.get("X-Request-ID", "no-uuid")
+    crawler_address = request.remote_addr
+    logger.debug(f"resolving crawler api_key: {crawler_uuid} @{crawler_address} - for {hosting_service}")
+
+    # TODO resolve a single api_key here from multiple keys
+    api_key = None
+    if hosting_service.api_keys and len(hosting_service.api_keys) > 0:
+        api_key = hosting_service.api_keys[0]
+    return api_key
+
+
+def get_block_for_crawler(hosting_service_id) -> Union[Dict, None]:
     state = state_manager.get_state_dict(hoster_prefix=hosting_service_id)
     if _state_is_too_old(state):
         return _get_block_dict(hosting_service_id)
     return None
 
 
-def get_loadbalanced_block_for_crawler(type) -> Dict:
+def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict, None]:
     """
     get a block from a hoster of type <type>.
 
@@ -69,7 +79,7 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     """
     # get all states
     hoster_id_state = {}
-    for hosting_service in HostingService.query.filter_by(type=type).all():
+    for hosting_service in HostingService.query.filter_by(type=hosting_service_type).all():
         hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
             hoster_prefix=hosting_service.id
         )
@@ -77,11 +87,11 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     # remove everything finished recently
     crawlable_hosters = {}
     for hoster_id, state in hoster_id_state.items():
-        #logger.debug(f"checking hoster {hoster_id}")
+        # logger.debug(f"checking hoster {hoster_id}")
         if _state_is_too_old(state):
-            #logger.debug(f"hoster {hoster_id} would be crawlable...")
+            # logger.debug(f"hoster {hoster_id} would be crawlable...")
             crawlable_hosters[hoster_id] = state
-    
+
     if not crawlable_hosters:
         # everything up to date, nothing to do
         logger.warning("no crawlable hosters!")

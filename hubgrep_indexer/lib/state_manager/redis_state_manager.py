@@ -1,7 +1,10 @@
 import time
 import logging
+from typing import List
 
-from .abstract_state_manager import AbstractStateManager, Block
+from hubgrep_indexer.constants import STATE_CRAWLER_API_KEY_EXPIRATION
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
+from hubgrep_indexer.lib.block import Block
 
 import redis
 
@@ -17,19 +20,26 @@ class RedisStateManager(AbstractStateManager):
         super().__init__()
         self.redis = redis.from_url("redis://localhost")
 
+        self.lock_key = "lock"
+
         self.run_created_ts_key = "run_created_ts"
         self.block_map_key = "blocks"
         self.highest_block_repo_id_key = "highest_block_repo_id"
         self.highest_confirmed_block_repo_id_key = "highest_confirmed_block_repo_id"
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
-        self.lock_key = "lock"
+        self.crawler_api_key_key = "crawler_api_key"
+        self.api_key_crawlers_key = "crawlers_by_api_key"
 
     @classmethod
-    def _get_redis_key(cls, hoster_prefix: str, key: str):
-        return f"{hoster_prefix}:{key}"
+    def _get_redis_key(cls, key_prefix: str, key: str):
+        return f"{key_prefix}:{key}"
 
-    def get_lock(self, hoster_prefix):
+    @classmethod
+    def _get_crawler_key(cls, crawler_id: str, crawler_address: str, key: str):
+        return cls._get_redis_key(f"{crawler_id}@{crawler_address}", key)
+
+    def get_lock(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.lock_key)
         lock = self.redis.lock(redis_key)
         return lock
@@ -71,30 +81,30 @@ class RedisStateManager(AbstractStateManager):
         counter_str: str = self.redis.get(redis_key)
         return int(counter_str)
 
-    def push_new_block(self, hoster_prefix, block: Block):
+    def push_new_block(self, hoster_prefix: str, block: Block):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         self.redis.hset(redis_key, block.uid, block.to_json())
 
-    def set_run_created_ts(self, hoster_prefix, timestamp: float = None):
+    def set_run_created_ts(self, hoster_prefix: str, timestamp: float = None):
         if timestamp is None:
             timestamp = time.time()
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         self.redis.set(redis_key, timestamp)
 
-    def get_run_created_ts(self, hoster_prefix):
+    def get_run_created_ts(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         if not self.redis.get(redis_key):
             self.set_run_created_ts(hoster_prefix, 0)
         return float(self.redis.get(redis_key))
 
-    def get_is_run_finished(self, hoster_prefix) -> bool:
+    def get_is_run_finished(self, hoster_prefix: str) -> bool:
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
         is_finished_str = self.redis.get(redis_key)
         if is_finished_str:
             is_finished_str = int(is_finished_str)
         return bool(is_finished_str)
 
-    def set_is_run_finished(self, hoster_prefix, is_finished: bool):
+    def set_is_run_finished(self, hoster_prefix: str, is_finished: bool):
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
         self.redis.set(redis_key, int(is_finished))
 
@@ -108,13 +118,13 @@ class RedisStateManager(AbstractStateManager):
         else:
             logger.info(f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}")
 
-    def _delete_block(self, hoster_prefix, block_uid):
+    def _delete_block(self, hoster_prefix: str, block_uid: str):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         block = self.redis.hget(redis_key, block_uid)
         self.redis.hdel(redis_key, block_uid)
         return block
 
-    def get_blocks(self, hoster_prefix):
+    def get_blocks(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         block_jsons = self.redis.hgetall(redis_key)
         blocks = {}
@@ -122,3 +132,25 @@ class RedisStateManager(AbstractStateManager):
             block = Block.from_json(block_json)
             blocks[block.uid] = block
         return blocks
+
+    def get_crawlers_by_api_key(self, api_key: str) -> List[str]:
+        redis_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
+        return self.redis.lrange(redis_key, 0, -1)
+
+    def remove_crawler_from_api_key(self, api_key: str, crawler_id_key: str):
+        redis_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
+        return self.redis.lrem(redis_key, 1, crawler_id_key)
+
+    def get_crawler_api_key(self, crawler_id: str, crawler_address: str) -> str:
+        redis_key = self._get_crawler_key(crawler_id, crawler_address, self.crawler_api_key_key)
+        # refresh expiration when polling
+        self.redis.expireat(redis_key, when=time.time() + STATE_CRAWLER_API_KEY_EXPIRATION)
+        return self.redis.get(redis_key)
+
+    def set_crawler_api_key(self, crawler_id: str, crawler_address: str, api_key: str):
+        # store the api_key behind a crawler_id key
+        redis_crawler_key = self._get_crawler_key(crawler_id, crawler_address, self.crawler_api_key_key)
+        self.redis.set(redis_crawler_key, api_key, ex=time.time() + STATE_CRAWLER_API_KEY_EXPIRATION)
+        # store/append the crawler_id_key behind the api_key
+        redis_api_key_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
+        self.redis.lpush(redis_api_key_key, redis_crawler_key)

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def get_loadbalanced_block(type: str):
     ts_before = time.time()
-    block_dict = get_loadbalanced_block_for_crawler(type)
+    block_dict = get_loadbalanced_block_for_crawler(hosting_service_type=type)
     logger.debug(f"got a load-balanced block - took {time.time() - ts_before}s")
 
     if not block_dict:
@@ -33,7 +33,7 @@ def get_loadbalanced_block(type: str):
 def get_block(hosting_service_id: int):
     ts_before = time.time()
     hosting_service = HostingService.query.get(hosting_service_id)
-    block_dict = get_block_for_crawler(hosting_service.id)
+    block_dict = get_block_for_crawler(hosting_service_id=hosting_service.id)
     logger.debug(f"got a block for {hosting_service} - took {time.time() - ts_before}s")
 
     if not block_dict:

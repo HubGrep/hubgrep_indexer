@@ -39,5 +39,5 @@ class TestHosters:
         db.session.commit()
 
         response = test_client.get("/api/v1/hosters")
-        assert response.json[0]['api_url'] == api_url
-        assert response.json[0]['api_key'] == api_key
+        assert api_url == response.json[0]['api_url']
+        assert api_key in response.json[0]['api_keys']
