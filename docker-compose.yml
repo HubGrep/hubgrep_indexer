@@ -8,8 +8,6 @@ services:
       POSTGRES_USER: hubgrep
       POSTGRES_PASSWORD: hubgrep
       POSTGRES_DB: hubgrep
-    volumes:
-      - /tmp:/tmp
     networks:
       - hubgrep_indexer
 
