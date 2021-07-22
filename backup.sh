@@ -30,7 +30,7 @@ $docker_compose exec redis cat /data/dump.rdb | gzip > ${backup_dir}/redis_backu
 
 
 # postgres
-$docker_compose exec -T postgres /usr/bin/pg_dump -U $POSTGRES_USER $POSTGRES_DB | gzip  > ${backup_dir}postgres_backup.sql.gz
+$docker_compose exec -T postgres /usr/bin/pg_dump -U $POSTGRES_USER $POSTGRES_DB | gzip  > ${backup_dir}/postgres_backup.sql.gz
 
 # local
 cp ${results_dir} ${backup_dir} -r
