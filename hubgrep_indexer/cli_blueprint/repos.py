@@ -48,12 +48,12 @@ def prune_exports(keep, hosting_service=None):
         q = HostingService.query
     for hosting_service in q.all():
         old_exports_raw = (
-            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=True)
+            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=True).filter(ExportMeta.file_path!=None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
         old_exports_unified = (
-            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=False)
+            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=False).filter(ExportMeta.file_path!=None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
