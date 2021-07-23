@@ -38,7 +38,7 @@ def create_app():
     app.config.from_object(config_mapping[app_env])
 
     # todo: make init_app function?
-    state_manager.init_app(app.config['REDIS_URL'])
+    state_manager.init_app(app)
 
     init_logging(loglevel=app.config['LOGLEVEL'])
 

@@ -26,7 +26,8 @@ class RedisStateManager(AbstractStateManager):
         self.run_is_finished_key = "run_is_finished"
         self.lock_key = "lock"
 
-    def init_app(self, redis_url, *args, **kwargs):
+    def init_app(self, app, *args, **kwargs):
+        redis_url = app.config['REDIS_URL']
         if redis_url:
             self.redis = redis.from_url(redis_url)
         else:
