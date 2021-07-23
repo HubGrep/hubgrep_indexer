@@ -42,7 +42,9 @@ class HostingService(db.Model):
         shorthand for the query to this hosters exports, sorted by datetime
         (newest first)
         """
-        query = ExportMeta.query.filter_by(hosting_service_id=self.id, is_raw=(not unified))
+        query = ExportMeta.query.filter_by(
+            hosting_service_id=self.id, is_raw=(not unified)
+        ).filter(ExportMeta.file_path != None)
         query.order_by(ExportMeta.created_at.desc())
 
         results_base_url = current_app.config["RESULTS_BASE_URL"]
@@ -58,7 +60,7 @@ class HostingService(db.Model):
             )
         return exports
 
-    def _get_default_export_filename(self, timestamp: datetime, unified=False):
+    def _get_default_export_filename(self, timestamp: datetime.datetime, unified=False):
         """
         returns something like "codeberg.org_unified_20211231_1200.csv.gz"
         """
@@ -112,7 +114,6 @@ class HostingService(db.Model):
         else:
             logger.error(f"unknown hoster {self.type}!")
         return headers
-
 
     def get_service_label(self):
         return re.split("//", self.landingpage_url)[1].rstrip("/")
