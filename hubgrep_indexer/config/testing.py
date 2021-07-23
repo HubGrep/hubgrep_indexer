@@ -17,4 +17,3 @@ class TestingConfig(Config):
 
     INDEXER_API_KEY = "indexerapikey"
     LOGIN_DISABLED = True
-

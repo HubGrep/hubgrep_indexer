@@ -60,11 +60,15 @@ def test_state_manager():
     yield state_manager
 
 
-def _add_hosting_service(api_url: str, landingpage_url: str = "landingpage_url", type: str = "github"):
+def _add_hosting_service(api_url: str,
+                         landingpage_url: str = "landingpage_url",
+                         type: str = "github",
+                         api_key: str = "secret"):
     hosting_service = HostingService()
     hosting_service.api_url = api_url
     hosting_service.landingpage_url = landingpage_url
     hosting_service.type = type
+    hosting_service.api_key = api_key
 
     db.session.add(hosting_service)
     db.session.commit()
