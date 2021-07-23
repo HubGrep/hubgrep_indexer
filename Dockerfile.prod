@@ -8,7 +8,9 @@ ENV FLASK_APP=hubgrep_indexer
 
 WORKDIR /var/task
 
-COPY ./ /var/task/
+COPY ./hubgrep_indexer /var/task/
+COPY ./requirements.txt /var/task/
+COPY ./manage.sh /var/task/
 
 RUN pip install -r requirements.txt
 
