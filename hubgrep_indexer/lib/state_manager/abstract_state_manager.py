@@ -86,6 +86,9 @@ class AbstractStateManager:
         self.batch_size = batch_size  # block size for a crawler
         self.block_timeout = block_timeout  # seconds
 
+    def init_app(self, *args, **kwargs):
+        pass
+
     def get_state_dict(self, hoster_prefix: str) -> Dict:
         return dict(
             highest_block_repo_id=self.get_highest_block_repo_id(hoster_prefix),

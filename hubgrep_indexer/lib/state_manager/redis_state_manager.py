@@ -4,6 +4,7 @@ import logging
 from .abstract_state_manager import AbstractStateManager, Block
 
 import redis
+import redislite
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class RedisStateManager(AbstractStateManager):
 
     def __init__(self):
         super().__init__()
-        self.redis = redis.from_url("redis://localhost")
+        self.redis = None
 
         self.run_created_ts_key = "run_created_ts"
         self.block_map_key = "blocks"
@@ -24,6 +25,13 @@ class RedisStateManager(AbstractStateManager):
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
         self.lock_key = "lock"
+
+    def init_app(self, app, *args, **kwargs):
+        redis_url = app.config['REDIS_URL']
+        if redis_url:
+            self.redis = redis.from_url(redis_url)
+        else:
+            self.redis = redislite.Redis()
 
     @classmethod
     def _get_redis_key(cls, hoster_prefix: str, key: str):
