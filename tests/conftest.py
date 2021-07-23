@@ -53,7 +53,7 @@ def test_client(test_app):
     ctx.pop()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(autouse=True)
 def test_state_manager():
     # set up a fake redis, so we dont need a redis container for the tests
     state_manager.redis = redislite.Redis()
