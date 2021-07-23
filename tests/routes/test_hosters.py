@@ -24,12 +24,12 @@ class TestHosters:
             hosting_service = HostingService.query.first()
             assert hosting_service.type == "github"
 
-    def test_get_hosters(self, test_client, hosting_service):
+    def test_get_hosters(self, test_client, hosting_service_github_1):
         response = test_client.get("/api/v1/hosters")
-        assert response.json[0]["api_url"] == hosting_service.api_url
+        assert response.json[0]["api_url"] == hosting_service_github_1.api_url
 
-    def test_get_hosters_authenticated(self, test_client, hosting_service):
+    def test_get_hosters_authenticated(self, test_client, hosting_service_github_1):
         response = test_client.get("/api/v1/hosters",
                                    headers={"Authorization": f"Basic {current_app.config['INDEXER_API_KEY']}"})
-        assert response.json[0]["api_url"] == hosting_service.api_url
+        assert response.json[0]["api_url"] == hosting_service_github_1.api_url
         assert "crawler_request_headers" in response.json[0]  # relies on api_key to have been added in hosting_service fixture
