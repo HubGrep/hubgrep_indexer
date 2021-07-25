@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run: touch .env
       - run: docker-compose -f docker-compose-ci.yml up -d
-      - run: docker-compose -f docker-compose-ci.yml run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
+      - run: mkdir -p /tmp/metrics/ && export PROMETHEUS_MULTIPROC_DIR=/tmp/metrics && docker-compose -f docker-compose-ci.yml run hubgrep_indexer bash -c "pip install -r requirements.txt && ./manage.sh test"
 
 
 
