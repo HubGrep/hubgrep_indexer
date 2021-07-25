@@ -1,0 +1,15 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 30s
+  # scrape_timeout is set to the global default (10s).
+
+  external_labels:
+
+scrape_configs:
+- job_name: prometheus
+
+  honor_labels: true
+  static_configs:
+  - targets: ['hubgrep_indexer:8080']
+    labels:
+      service: indexer

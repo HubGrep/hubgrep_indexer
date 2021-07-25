@@ -10,11 +10,19 @@ import logging
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
-from hubgrep_indexer import db, state_manager
+from hubgrep_indexer import db, state_manager, metrics
 
 from hubgrep_indexer.api_blueprint import api
 
 logger = logging.getLogger(__name__)
+
+from prometheus_client import Counter
+
+counter = Counter(
+    "indexer_collected_repos",
+    "collected repos in indexer",
+    labelnames=("hosting_service_type", "hosting_service_id"),
+)
 
 
 def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
@@ -37,7 +45,13 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
     db.session.bulk_save_objects(parsed_repos)
     db.session.commit()
 
+    counter.labels(
+        hosting_service_type=hosting_service.type,
+        hosting_service_id=hosting_service.id,
+    ).inc(len(parsed_repos)) 
+    
     return parsed_repos, repo_class
+
 
 @api.route("/hosters/<hosting_service_id>/", methods=["PUT"])
 @api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["PUT"])
@@ -54,10 +68,14 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     logger.debug(f"adding repos to {hosting_service}")
     ts_db_start = time.time()
-    parsed_repos, repo_class = _append_repos(hosting_service=hosting_service, repo_dicts=repo_dicts)
+    parsed_repos, repo_class = _append_repos(
+        hosting_service=hosting_service, repo_dicts=repo_dicts
+    )
 
     ts_db_end = time.time()
-    logger.debug(f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s")
+    logger.debug(
+        f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s"
+    )
     state_helper = get_state_helper(hosting_service.type)
 
     # will block, if the lock is already aquired, and go on after release
@@ -69,13 +87,17 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
             parsed_repos=parsed_repos,
         )
     ts_state_end = time.time()
-    logger.debug(f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s")
-    
+    logger.debug(
+        f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s"
+    )
+
     if run_is_finished:
         logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
         repo_class.rotate(hosting_service)
         ts_rotate_end = time.time()
-        logger.debug(f"rotated repos for {hosting_service} - took {ts_rotate_end - ts_state_end}s")
+        logger.debug(
+            f"rotated repos for {hosting_service} - took {ts_rotate_end - ts_state_end}s"
+        )
 
         logger.info(f"{hosting_service}: exporting raw!")
         export = hosting_service.export_repositories(unified=False)
@@ -88,6 +110,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         db.session.commit()
 
         ts_export_end = time.time()
-        logger.debug(f"exported repos for {hosting_service} - took {ts_export_end - ts_rotate_end}s")
+        logger.debug(
+            f"exported repos for {hosting_service} - took {ts_export_end - ts_rotate_end}s"
+        )
 
     return jsonify(dict(status="ok")), 200

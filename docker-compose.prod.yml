@@ -20,8 +20,8 @@ services:
       dockerfile: Dockerfile.prod
 
     volumes:
-      - ./:/var/task
       - ./results:/var/results
+      - ./hosters.json:/var/task/hosters.json
 
     restart: "${RESTART:-no}"
 
@@ -35,12 +35,24 @@ services:
       - /bin/bash
       - -c
       - |
-         gunicorn --bind 0.0.0.0:8080 "hubgrep_indexer:create_app()"
+          rm -rf /tmp/metrics/
+          mkdir /tmp/metrics/
+          export PROMETHEUS_MULTIPROC_DIR=/tmp/metrics
+          gunicorn --bind 0.0.0.0:8080 -c gunicorn_config.py "hubgrep_indexer:create_app()"
     tty: true
     networks:
       - hubgrep_indexer
       - hubgrep
 
+  prometheus:
+    image: prom/prometheus
+    ports:
+        - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - hubgrep_indexer
+      - hubgrep
 
 networks:
   hubgrep_indexer:

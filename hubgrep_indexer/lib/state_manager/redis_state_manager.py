@@ -27,7 +27,7 @@ class RedisStateManager(AbstractStateManager):
         self.lock_key = "lock"
 
     def init_app(self, app, *args, **kwargs):
-        redis_url = app.config['REDIS_URL']
+        redis_url = app.config["REDIS_URL"]
         if redis_url:
             self.redis = redis.from_url(redis_url)
         else:
@@ -56,11 +56,15 @@ class RedisStateManager(AbstractStateManager):
         return highest_repo_id
 
     def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id: int):
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
+        redis_key = self._get_redis_key(
+            hoster_prefix, self.highest_confirmed_block_repo_id_key
+        )
         self.redis.set(redis_key, repo_id)
 
     def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
+        redis_key = self._get_redis_key(
+            hoster_prefix, self.highest_confirmed_block_repo_id_key
+        )
         repo_id_str: str = self.redis.get(redis_key)
         if not repo_id_str:
             highest_repo_id = 0
@@ -114,7 +118,9 @@ class RedisStateManager(AbstractStateManager):
             # only update existing blocks
             self.redis.hset(redis_key, block.uid, block.to_json())
         else:
-            logger.info(f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}")
+            logger.info(
+                f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}"
+            )
 
     def _delete_block(self, hoster_prefix, block_uid):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
