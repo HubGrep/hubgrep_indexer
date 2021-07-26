@@ -51,16 +51,18 @@ def create_app():
 
     @app.before_request
     def log_crawler_ids():
-        g.hubgrep_request_start_ts = time.time()
         machine_id = request.headers.get('Hubgrep-Crawler-Machine-ID', False)
-        if machine_id:
+        g.is_crawler_request = bool(machine_id)
+        if g.is_crawler_request:
+            g.hubgrep_request_start_ts = time.time()
             logger.info(
-                f"before request - request-id: {request.headers.get('X-Request-ID')} - crawler-id: {request.headers.get('X-Correlation-ID')} - machine-id: {machine_id}")
+                f"before crawler request - request-id: {request.headers.get('X-Request-ID')} - crawler-id: {request.headers.get('X-Correlation-ID')} - machine-id: {machine_id}")
 
     @app.after_request
     def time_crawler_request(response):
-        request_total_ts = time.time() - g.hubgrep_request_start_ts
-        logger.info(f" after request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
+        if g.is_crawler_request:
+            request_total_ts = time.time() - g.hubgrep_request_start_ts
+            logger.info(f" after crawler request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
         return response
 
     @login_manager.request_loader
