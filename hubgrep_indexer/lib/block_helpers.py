@@ -43,19 +43,6 @@ def _get_block_dict(hosting_service_id) -> Dict:
     return block.to_dict()
 
 
-def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
-
-    crawler_uuid = request.headers.get("X-Request-ID", "no-uuid")
-    crawler_address = request.remote_addr
-    logger.debug(f"resolving crawler api_key: {crawler_uuid} @{crawler_address} - for {hosting_service}")
-
-    # TODO resolve a single api_key here from multiple keys
-    api_key = None
-    if hosting_service.api_keys and len(hosting_service.api_keys) > 0:
-        api_key = hosting_service.api_keys[0]
-    return api_key
-
-
 def get_block_for_crawler(hosting_service_id) -> Union[Dict, None]:
     state = state_manager.get_state_dict(hoster_prefix=hosting_service_id)
     if _state_is_too_old(state):
@@ -108,3 +95,15 @@ def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict,
     logger.debug(f"creating block for hoster {oldest_hoster_id}:")
     logger.debug(f"state {oldest_hoster_state}:")
     return _get_block_dict(oldest_hoster_id)
+
+
+def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
+    crawler_id = request.headers.get("X-Correlation-ID", "no-crawler-id")
+    machine_id = request.headers.get("Hubgrep-Crawler-Machine-ID", "no-machine-id")
+    logger.debug(f"resolving {hosting_service} api_key for machine-id: {machine_id}")
+
+    # TODO resolve a single api_key here from multiple keys
+    api_key = None
+    if hosting_service.api_keys and len(hosting_service.api_keys) > 0:
+        api_key = hosting_service.api_keys[0]
+    return api_key

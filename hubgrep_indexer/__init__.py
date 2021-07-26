@@ -1,10 +1,11 @@
 import os
+import time
 import base64
 import redis
 import logging
 import binascii
 from werkzeug.serving import WSGIRequestHandler
-from flask import Flask
+from flask import Flask, request, g
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
@@ -47,6 +48,20 @@ def create_app():
 
     login_manager.init_app(app)
     user_crawlers = User(api_key=app.config['INDEXER_API_KEY'])
+
+    @app.before_request
+    def log_crawler_ids():
+        g.hubgrep_request_start_ts = time.time()
+        machine_id = request.headers.get('Hubgrep-Crawler-Machine-ID', False)
+        if machine_id:
+            logger.info(
+                f"before request - request-id: {request.headers.get('X-Request-ID')} - crawler-id: {request.headers.get('X-Correlation-ID')} - machine-id: {machine_id}")
+
+    @app.after_request
+    def time_crawler_request(response):
+        request_total_ts = time.time() - g.hubgrep_request_start_ts
+        logger.info(f" after request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
+        return response
 
     @login_manager.request_loader
     def load_user_from_request(request):
