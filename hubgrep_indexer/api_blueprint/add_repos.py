@@ -1,29 +1,31 @@
 import time
 from typing import List
+import logging
 
 from flask import request
 from flask import jsonify
 from flask_login import login_required
 
-import logging
+from prometheus_client import Counter
 
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
-from hubgrep_indexer import db, state_manager, metrics
+from hubgrep_indexer import db, state_manager
 
 from hubgrep_indexer.api_blueprint import api
 
 logger = logging.getLogger(__name__)
 
-from prometheus_client import Counter
 
+# todo: put in lib
+"""
 counter = Counter(
     "indexer_collected_repos",
     "collected repos in indexer",
     labelnames=("hosting_service_type", "hosting_service_id"),
 )
-
+"""
 
 def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
     repo_class = Repository.repo_class_for_type(hosting_service.type)
@@ -38,18 +40,18 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
         try:
             r = repo_class.from_dict(hosting_service.id, repo_dict)
             parsed_repos.append(r)
-        except Exception as e:
+        except Exception:
             logger.exception(f"could not parse repo dict for {hosting_service}")
             logger.warning(f"(skipping) repo dict: {repo_dict}")
 
     db.session.bulk_save_objects(parsed_repos)
     db.session.commit()
 
-    counter.labels(
-        hosting_service_type=hosting_service.type,
-        hosting_service_id=hosting_service.id,
-    ).inc(len(parsed_repos)) 
-    
+    #counter.labels(
+    #    hosting_service_type=hosting_service.type,
+    #    hosting_service_id=hosting_service.id,
+    #).inc(len(parsed_repos))
+
     return parsed_repos, repo_class
 
 

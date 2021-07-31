@@ -16,8 +16,6 @@ services:
     env_file: .env
     networks:
       - hubgrep_indexer
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/data
     ports:
       - 5432:5432
 
