@@ -59,6 +59,14 @@ class Repository(db.Model):
         """
         delete repos from old runs, set `is_completed` to new ones
         """
+        # (can we have a table per hoster somehow? then we could just create a new table everytime..)
+        # todo: 
+        # fix crawler finishing (host_state_helpers, wait for last open block after finish)
+        # copy table
+        # rotate table (drop everything for hoster)
+        # async:
+        #   export from copy
+        #   delete copy (?)
         logger.debug(f"rotating repos for {hosting_service}")
         repo_class = cls.repo_class_for_type(hosting_service.type)
         con = db.engine.raw_connection()

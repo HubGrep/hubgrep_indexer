@@ -29,44 +29,69 @@ class IStateHelper:
         - true/false if we reached end, None if block is unrelated to the current run
         """
         block = state_manager.get_block(
-            hoster_prefix=hosting_service_id, block_uid=block_uid)
+            hoster_prefix=hosting_service_id, block_uid=block_uid
+        )
 
         if not block:
             # Block has already been deleted from the previous run, no state changes
             logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
             return None
-        else:
-            is_run_finished = state_manager.get_is_run_finished(
-                hoster_prefix=hosting_service_id)
-            if is_run_finished:
-                logger.info(f"skipping state update for outdated block, uid: {block_uid}")
-                # this Block belongs to an old run, so we avoid touching any state for it
-                return None
+
+        is_run_finished = state_manager.get_is_run_finished(
+            hoster_prefix=hosting_service_id
+        )
+        if is_run_finished:
+            logger.info(f"skipping state update for outdated block, uid: {block_uid}")
+
+            # run is finished (as in, we hit the end), but we may have blocks open
+            # so we dont trigger export-and-rotate until the blocks at least timed out
+
+            run_created_ts = state_manager.get_run_created_ts(
+                hoster_prefix=hosting_service_id
+            )
+            blocks = state_manager.get_blocks(hoster_prefix=hosting_service_id)
+
+            for block in blocks:
+                if block.run_created_ts == run_created_ts:
+                    # blocks open in this run, dont finish
+                    # todo:
+                    # we have some logic to retry a timedout block, (get_timed_out_block)
+                    # but where do we actually decide not to wait for them if it takes too long?
+                    return None
+
+            # this Block belongs to an old run, so we avoid touching any state for it
+            return None
 
         state_manager.finish_block(
-            hoster_prefix=hosting_service_id, block_uid=block_uid)
+            hoster_prefix=hosting_service_id, block_uid=block_uid
+        )
         if len(parsed_repos) == 0:
             state_manager.increment_empty_results_counter(
-                hoster_prefix=hosting_service_id, amount=1)
+                hoster_prefix=hosting_service_id, amount=1
+            )
         else:
             state_manager.set_empty_results_counter(
-                hoster_prefix=hosting_service_id, count=0)
+                hoster_prefix=hosting_service_id, count=0
+            )
 
         # check on the effects of the block transaction
         has_reached_end = cls.has_reached_end(
             hosting_service_id=hosting_service_id,
             state_manager=state_manager,
             parsed_repos=parsed_repos,
-            block=block)
+            block=block,
+        )
         has_too_many_empty = cls.has_too_many_consecutive_empty_results(
-            hosting_service_id=hosting_service_id,
-            state_manager=state_manager)
+            hosting_service_id=hosting_service_id, state_manager=state_manager
+        )
 
         if has_reached_end:
-            logger.info(f'crawler reached end for hoster: {hosting_service_id}')
+            logger.info(f"crawler reached end for hoster: {hosting_service_id}")
             state_manager.finish_run(hoster_prefix=hosting_service_id)
         elif has_too_many_empty:
-            logger.info(f'crawler reach max empty results for hoster: {hosting_service_id}')
+            logger.info(
+                f"crawler reach max empty results for hoster: {hosting_service_id}"
+            )
             state_manager.finish_run(hoster_prefix=hosting_service_id)
         else:
             # we are somewhere in the middle of a hosters repos
@@ -112,7 +137,8 @@ class IStateHelper:
 
         # get the ending repo id from a block we have seen containing results
         highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
-            hoster_prefix=hosting_service_id)
+            hoster_prefix=hosting_service_id
+        )
 
         # get ending repo id of the block after the last confirmed one
         last_block_id = highest_confirmed_id + state_manager.batch_size

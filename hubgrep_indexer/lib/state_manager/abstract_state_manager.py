@@ -23,6 +23,13 @@ class Block:
         self.attempts_at = []
         self.status = ""
 
+    def is_dead(self):
+        """
+        we retried this block but it keeps failing
+        """
+        # todo
+        return False
+
     @classmethod
     def new(cls, from_id, to_id, run_created_ts=None, ids=None):
         block = Block()
@@ -236,6 +243,7 @@ class AbstractStateManager:
                 block.attempts_at.append(timestamp_now)
                 self.update_block(hoster_prefix=hoster_prefix, block=block)
                 return block
+        # todo: should we delete dead blocks here?
         return None
 
 
