@@ -12,9 +12,6 @@ scrape_configs:
 
   honor_labels: true
   static_configs:
-  - targets: ['hubgrep_indexer:8080']
-    labels:
-      service: indexer
   - targets: ['cadvisor:8080']
     labels:
       service: cadvisor
