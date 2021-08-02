@@ -60,7 +60,7 @@ class Repository(db.Model):
         return db.relationship("HostingService")
 
     @classmethod
-    def rotate(cls, hosting_service: HostingService) -> None:
+    def rotate(cls, hosting_service: "HostingService") -> None:
         """
         delete repos from old runs, set `is_completed` to new ones
         """
@@ -100,7 +100,7 @@ class Repository(db.Model):
 
     @classmethod
     @contextmanager
-    def make_tmp_table(cls, hosting_service: HostingService) -> str:
+    def make_tmp_table(cls, hosting_service: "HostingService") -> str:
         """
         make a temporary table as a copy of the table for <hosting_service>
         use as context_manager:
@@ -173,7 +173,7 @@ class Repository(db.Model):
     def export_csv_gz(
         cls,
         table_name: str,
-        hosting_service: HostingService,
+        hosting_service: "HostingService",
         filename: str,
         results_base_path: str = None,
         select_statement_template: str = None,
@@ -222,7 +222,7 @@ class Repository(db.Model):
     def export_unified_csv_gz(
         cls,
         table_name: str,
-        hosting_service: HostingService,
+        hosting_service: "HostingService",
         filename: str,
         results_base_path: str = None,
     ) -> None:
