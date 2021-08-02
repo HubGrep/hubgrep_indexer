@@ -28,8 +28,6 @@ def export_repos(hosting_service):
     db.session.commit()
 
 
-
-
 @cli_bp.cli.command(help="remove old exports, keep the newest ones")
 @click.option("--keep", type=int, default=3)
 @click.option(
