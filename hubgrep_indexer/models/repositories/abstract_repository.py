@@ -162,8 +162,7 @@ class Repository(db.Model):
     def export_csv_gz(
         cls,
         table_name,
-        hosting_service_id,
-        hosting_service_type,
+        hosting_service,
         filename,
         results_base_path=None,
         select_statement_template=None,
@@ -187,7 +186,7 @@ class Repository(db.Model):
             """
         select_statement = select_statement_template.format(
             TABLE_NAME=table_name,
-            HOSTING_SERVICE_ID=hosting_service_id,
+            HOSTING_SERVICE_ID=hosting_service.id,
         )
 
         logger.debug("running export...")
@@ -212,16 +211,14 @@ class Repository(db.Model):
     def export_unified_csv_gz(
         cls,
         table_name,
-        hosting_service_id,
-        hosting_service_type,
+        hosting_service,
         filename,
         results_base_path=None,
     ):
         select_statement_template = cls.unified_select_statement_template
         cls.export_csv_gz(
             table_name,
-            hosting_service_id,
-            hosting_service_type,
+            hosting_service,
             filename,
             results_base_path,
             select_statement_template,

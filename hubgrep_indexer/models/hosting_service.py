@@ -85,9 +85,9 @@ class HostingService(db.Model):
         repo_class: Repository = Repository.repo_class_for_type(self.type)
         before = time.time()
         if not unified:
-            repo_class.export_csv_gz(table_name, self.id, self.type, export_filename)
+            repo_class.export_csv_gz(table_name, self, export_filename)
         else:
-            repo_class.export_unified_csv_gz(table_name, self.id, self.type, export_filename)
+            repo_class.export_unified_csv_gz(table_name, self, export_filename)
         repo_count = self.count_repos()
         logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
 
