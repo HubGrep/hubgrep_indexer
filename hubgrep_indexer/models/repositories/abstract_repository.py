@@ -9,7 +9,7 @@ import gzip
 from pathlib import Path
 from contextlib import contextmanager
 
-from typing import Union
+from typing import Union, TYPE_CHECKING
 
 from flask import current_app
 from sqlalchemy.ext.declarative import declared_attr
@@ -21,6 +21,9 @@ from hubgrep_indexer.constants import (
 )
 
 from hubgrep_indexer import db
+
+if TYPE_CHECKING:
+    from hubgrep_indexer.models.hosting_service import HostingService
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +43,7 @@ class Repository(db.Model):
         )
 
     @classmethod
-    def clean_string(cls, string: Union[str, None]):
+    def clean_string(cls, string: Union[str, None]) -> str:
         """
         clean strings for text fields before saving them to the db
         """
@@ -57,7 +60,7 @@ class Repository(db.Model):
         return db.relationship("HostingService")
 
     @classmethod
-    def rotate(cls, hosting_service):
+    def rotate(cls, hosting_service: HostingService) -> None:
         """
         delete repos from old runs, set `is_completed` to new ones
         """
@@ -97,7 +100,7 @@ class Repository(db.Model):
 
     @classmethod
     @contextmanager
-    def make_tmp_table(cls, hosting_service):
+    def make_tmp_table(cls, hosting_service: HostingService) -> str:
         """
         make a temporary table as a copy of the table for <hosting_service>
         use as context_manager:
@@ -120,23 +123,29 @@ class Repository(db.Model):
                 f"""CREATE TABLE {tmp_table_name} as table {cls.__tablename__}
                 """
                 # select from ...
-                #where
+                # where
                 #    hosting_service_id = %s,
-                #and
+                # and
                 #    is_completed = true
-                #(hosting_service_id,),
+                # (hosting_service_id,),
             )
             con.commit()
         finally:
             con.close()
-        logger.info(f"creating temp table {tmp_table_name} took {time.time() - before}s")
+        logger.info(
+            f"creating temp table {tmp_table_name} took {time.time() - before}s"
+        )
         try:
             yield tmp_table_name
         finally:
             cls._drop_tmp_table(tmp_table_name)
 
     @classmethod
-    def _drop_tmp_table(cls, tmp_table_name):
+    def _drop_tmp_table(cls, tmp_table_name: str) -> str:
+        """
+        drop table `tmp_table_name`
+        returns `tmp_table_name`
+        """
         before = time.time()
         con = db.engine.raw_connection()
         try:
@@ -146,27 +155,29 @@ class Repository(db.Model):
                 DROP TABLE {tmp_table_name}
                 """
                 # select from ...
-                #where
+                # where
                 #    hosting_service_id = %s,
-                #and
+                # and
                 #    is_completed = true
-                #(hosting_service_id,),
+                # (hosting_service_id,),
             )
             con.commit()
         finally:
             con.close()
-        logger.info(f"dropping temp table {tmp_table_name} took {time.time() - before}s")
+        logger.info(
+            f"dropping temp table {tmp_table_name} took {time.time() - before}s"
+        )
         return tmp_table_name
 
     @classmethod
     def export_csv_gz(
         cls,
-        table_name,
-        hosting_service,
-        filename,
-        results_base_path=None,
-        select_statement_template=None,
-    ):
+        table_name: str,
+        hosting_service: HostingService,
+        filename: str,
+        results_base_path: str = None,
+        select_statement_template: str = None,
+    ) -> None:
         """
         export table content to a csv
 
@@ -210,11 +221,11 @@ class Repository(db.Model):
     @classmethod
     def export_unified_csv_gz(
         cls,
-        table_name,
-        hosting_service,
-        filename,
-        results_base_path=None,
-    ):
+        table_name: str,
+        hosting_service: HostingService,
+        filename: str,
+        results_base_path: str = None,
+    ) -> None:
         select_statement_template = cls.unified_select_statement_template
         cls.export_csv_gz(
             table_name,
@@ -244,5 +255,3 @@ class Repository(db.Model):
             HOST_TYPE_GITLAB: GitlabRepository,
         }
         return RepoClasses[type]
-
-
