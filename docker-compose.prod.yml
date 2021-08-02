@@ -20,10 +20,10 @@ services:
       dockerfile: Dockerfile.prod
 
     volumes:
-      - ./:/var/task
       - ./results:/var/results
 
     restart: "${RESTART:-no}"
+    mem_limit: 500m
 
     # uplink port to host
     ports:
@@ -35,12 +35,41 @@ services:
       - /bin/bash
       - -c
       - |
-         gunicorn --bind 0.0.0.0:8080 "hubgrep_indexer:create_app()"
+          gunicorn --bind 0.0.0.0:8080 -c gunicorn_config.py "hubgrep_indexer:create_app()"
     tty: true
     networks:
       - hubgrep_indexer
       - hubgrep
 
+  prometheus:
+    image: prom/prometheus
+    ports:
+        - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - hubgrep_indexer
+      - hubgrep
+    mem_limit: 1024m
+    command: 
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.console.libraries=/usr/share/prometheus/console_libraries
+        - --web.console.templates=/usr/share/prometheus/consoles
+        - --storage.tsdb.retention.time=7d
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - hubgrep_indexer
 
 networks:
   hubgrep_indexer:

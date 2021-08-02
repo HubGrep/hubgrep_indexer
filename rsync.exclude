@@ -18,3 +18,4 @@ __pycache__/
 
 postgres_data/
 results/
+docker-compose.yml

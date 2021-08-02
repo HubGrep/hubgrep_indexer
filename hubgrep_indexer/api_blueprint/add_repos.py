@@ -1,11 +1,10 @@
 import time
 from typing import List
+import logging
 
 from flask import request
 from flask import jsonify
 from flask_login import login_required
-
-import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
@@ -30,7 +29,7 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
         try:
             r = repo_class.from_dict(hosting_service.id, repo_dict)
             parsed_repos.append(r)
-        except Exception as e:
+        except Exception:
             logger.exception(f"could not parse repo dict for {hosting_service}")
             logger.warning(f"(skipping) repo dict: {repo_dict}")
 
@@ -38,7 +37,6 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
     db.session.commit()
 
     return parsed_repos, repo_class
-
 
 def export_repos(hosting_service: HostingService):
     logger.info(f"{hosting_service}: exporting raw!")
@@ -74,10 +72,14 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     logger.debug(f"adding repos to {hosting_service}")
     ts_db_start = time.time()
-    parsed_repos, repo_class = _append_repos(hosting_service=hosting_service, repo_dicts=repo_dicts)
+    parsed_repos, repo_class = _append_repos(
+        hosting_service=hosting_service, repo_dicts=repo_dicts
+    )
 
     ts_db_end = time.time()
-    logger.debug(f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s")
+    logger.debug(
+        f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s"
+    )
     state_helper = get_state_helper(hosting_service.type)
 
     # will block, if the lock is already aquired, and go on after release
@@ -89,8 +91,10 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
             parsed_repos=parsed_repos,
         )
     ts_state_end = time.time()
-    logger.debug(f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s")
-    
+    logger.debug(
+        f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s"
+    )
+
     if run_is_finished:
         logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
         repo_class.rotate(hosting_service)
