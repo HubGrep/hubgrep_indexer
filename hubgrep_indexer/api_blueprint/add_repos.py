@@ -39,6 +39,26 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
 
     return parsed_repos, repo_class
 
+
+def export_repos(hosting_service: HostingService):
+    logger.info(f"{hosting_service}: exporting raw!")
+
+    before = time.time()
+    # make temp table
+    repo_class = Repository.repo_class_for_type(hosting_service.type)
+    with repo_class.make_tmp_table(hosting_service) as tmp_table:
+        export = hosting_service.export_repositories(tmp_table, unified=False)
+        db.session.add(export)
+        db.session.commit()
+
+        logger.info(f"{hosting_service}: exporting unified!")
+        export = hosting_service.export_repositories(tmp_table, unified=True)
+        db.session.add(export)
+        db.session.commit()
+    
+    logger.debug(f"exported repos for {hosting_service} - took {time.time() - before}s")
+
+
 @api.route("/hosters/<hosting_service_id>/", methods=["PUT"])
 @api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["PUT"])
 @login_required
@@ -76,18 +96,6 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         repo_class.rotate(hosting_service)
         ts_rotate_end = time.time()
         logger.debug(f"rotated repos for {hosting_service} - took {ts_rotate_end - ts_state_end}s")
-
-        logger.info(f"{hosting_service}: exporting raw!")
-        export = hosting_service.export_repositories(unified=False)
-        db.session.add(export)
-        db.session.commit()
-
-        logger.info(f"{hosting_service}: exporting unified!")
-        export = hosting_service.export_repositories(unified=True)
-        db.session.add(export)
-        db.session.commit()
-
-        ts_export_end = time.time()
-        logger.debug(f"exported repos for {hosting_service} - took {ts_export_end - ts_rotate_end}s")
+        export_repos(hosting_service)
 
     return jsonify(dict(status="ok")), 200

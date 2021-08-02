@@ -4,8 +4,10 @@ All hoster repo classes are inherited from the AbstractRepository class defined 
 This module contains helpers to export the repos as well.
 """
 import logging
+import time
 import gzip
 from pathlib import Path
+from contextlib import contextmanager
 
 from typing import Union
 
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 class Repository(db.Model):
     __abstract__ = True
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True)
     is_completed = db.Column(db.Boolean, nullable=True)
 
     # foreign keys in abstract classes need to be defined in attributes
@@ -70,7 +72,7 @@ class Repository(db.Model):
                 from {repo_class.__tablename__}
                 where
                     is_completed is true
-                    and
+                and
                     hosting_service_id = %s
                 """,
                 (hosting_service.id,),
@@ -94,8 +96,72 @@ class Repository(db.Model):
             con.close()
 
     @classmethod
+    @contextmanager
+    def make_tmp_table(cls, hosting_service):
+        """
+        make a temporary table as a copy of the table for <hosting_service>
+        use as context_manager:
+            ```
+            with repo_class.make_tmp_table(hosting_service) as table_name:
+                do_stuff(table_name)
+            ```
+        table will be deleted when leaving the context
+        """
+        tmp_table_name = (
+            f"{hosting_service.type}_{hosting_service.id}_tmp_{int(time.time())}"
+        )
+        before = time.time()
+        con = db.engine.raw_connection()
+        try:
+            cur = con.cursor()
+            # todo: test if it makes a difference in time when we filter this here,
+            # and let the temp table only have the hoster included
+            cur.execute(
+                f"""CREATE TABLE {tmp_table_name} as table {cls.__tablename__}
+                """
+                # select from ...
+                #where
+                #    hosting_service_id = %s,
+                #and
+                #    is_completed = true
+                #(hosting_service_id,),
+            )
+            con.commit()
+        finally:
+            con.close()
+        logger.info(f"creating temp table {tmp_table_name} took {time.time() - before}s")
+        try:
+            yield tmp_table_name
+        finally:
+            cls._drop_tmp_table(tmp_table_name)
+
+    @classmethod
+    def _drop_tmp_table(cls, tmp_table_name):
+        before = time.time()
+        con = db.engine.raw_connection()
+        try:
+            cur = con.cursor()
+            cur.execute(
+                f"""
+                DROP TABLE {tmp_table_name}
+                """
+                # select from ...
+                #where
+                #    hosting_service_id = %s,
+                #and
+                #    is_completed = true
+                #(hosting_service_id,),
+            )
+            con.commit()
+        finally:
+            con.close()
+        logger.info(f"dropping temp table {tmp_table_name} took {time.time() - before}s")
+        return tmp_table_name
+
+    @classmethod
     def export_csv_gz(
         cls,
+        table_name,
         hosting_service_id,
         hosting_service_type,
         filename,
@@ -107,8 +173,6 @@ class Repository(db.Model):
 
         this feels horribly hacky, but its fast.
         """
-        repo_class = cls.repo_class_for_type(hosting_service_type)
-
         if not results_base_path:
             results_base_path = current_app.config["RESULTS_PATH"]
         results_base_path = Path(results_base_path)
@@ -116,13 +180,13 @@ class Repository(db.Model):
         if not select_statement_template:
             select_statement_template = """
             select * from {TABLE_NAME}
-            where 
+            where
                 hosting_service_id = {HOSTING_SERVICE_ID}
             and
                 is_completed = true
             """
         select_statement = select_statement_template.format(
-            TABLE_NAME=repo_class.__tablename__,
+            TABLE_NAME=table_name,
             HOSTING_SERVICE_ID=hosting_service_id,
         )
 
@@ -147,6 +211,7 @@ class Repository(db.Model):
     @classmethod
     def export_unified_csv_gz(
         cls,
+        table_name,
         hosting_service_id,
         hosting_service_type,
         filename,
@@ -154,6 +219,7 @@ class Repository(db.Model):
     ):
         select_statement_template = cls.unified_select_statement_template
         cls.export_csv_gz(
+            table_name,
             hosting_service_id,
             hosting_service_type,
             filename,
@@ -181,3 +247,5 @@ class Repository(db.Model):
             HOST_TYPE_GITLAB: GitlabRepository,
         }
         return RepoClasses[type]
+
+
