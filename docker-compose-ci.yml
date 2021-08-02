@@ -26,8 +26,6 @@ services:
       - 8081:8080
 
     env_file: .env
-    environment:
-      PROMETHEUS_MULTIPROC_DIR: /tmp/metrics
 
     command: >
       bash -ic " \

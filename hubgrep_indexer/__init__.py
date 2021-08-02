@@ -1,6 +1,5 @@
 import os
 import base64
-import redis
 import logging
 import binascii
 from werkzeug.serving import WSGIRequestHandler
@@ -8,7 +7,6 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from hubgrep_indexer.lib.init_logging import init_logging
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
