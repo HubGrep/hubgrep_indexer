@@ -11,8 +11,6 @@ from flask_login import LoginManager, UserMixin
 from hubgrep_indexer.lib.init_logging import init_logging
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
-#from prometheus_flask_exporter.multiprocess import GunicornInternalPrometheusMetrics
-
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
@@ -22,7 +20,6 @@ state_manager = RedisStateManager()
 login_manager = LoginManager()
 
 app = Flask(__name__)
-#metrics = GunicornInternalPrometheusMetrics(app).for_app_factory()
 # fix keep-alive in dev server (dropped connections from client sessions)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
@@ -40,16 +37,12 @@ def create_app():
 
     app.config.from_object(config_mapping[app_env])
 
-    # todo: make init_app function?
     state_manager.init_app(app)
 
     init_logging(loglevel=app.config['LOGLEVEL'])
 
     db.init_app(app)
     migrate.init_app(app, db=db)
-
-    # serves flask metrics under /metrics
-    #metrics.init_app(app)
 
     login_manager.init_app(app)
     user_crawlers = User(api_key=app.config['INDEXER_API_KEY'])
