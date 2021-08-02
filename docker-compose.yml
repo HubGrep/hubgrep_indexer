@@ -16,6 +16,8 @@ services:
     env_file: .env
     networks:
       - hubgrep_indexer
+    ports:
+      - 5432:5432
 
   redis:
     image: redis

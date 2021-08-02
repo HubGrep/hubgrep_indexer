@@ -1,6 +1,5 @@
 import os
 import base64
-import redis
 import logging
 import binascii
 from werkzeug.serving import WSGIRequestHandler
@@ -20,6 +19,7 @@ migrate = Migrate()
 state_manager = RedisStateManager()
 login_manager = LoginManager()
 
+app = Flask(__name__)
 # fix keep-alive in dev server (dropped connections from client sessions)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
@@ -37,7 +37,6 @@ def create_app():
 
     app.config.from_object(config_mapping[app_env])
 
-    # todo: make init_app function?
     state_manager.init_app(app)
 
     init_logging(loglevel=app.config['LOGLEVEL'])
@@ -69,6 +68,7 @@ def create_app():
     app.register_blueprint(frontend)
     app.register_blueprint(cli_bp)
     app.register_blueprint(results_bp)
+
     return app
 
 
