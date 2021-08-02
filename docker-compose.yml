@@ -43,9 +43,6 @@ services:
     command: >
       bash -ic " \
         pip install -r requirements.txt
-        rm -rf /tmp/metrics/
-        mkdir /tmp/metrics/
-        export PROMETHEUS_MULTIPROC_DIR=/tmp/metrics
         flask run --host 0.0.0.0 --port 8080
         "
     tty: true

@@ -21,7 +21,6 @@ services:
 
     volumes:
       - ./results:/var/results
-      - ./hosters.json:/var/task/hosters.json
 
     restart: "${RESTART:-no}"
     mem_limit: 500m
@@ -36,9 +35,6 @@ services:
       - /bin/bash
       - -c
       - |
-          rm -rf /tmp/metrics/
-          mkdir /tmp/metrics/
-          export PROMETHEUS_MULTIPROC_DIR=/tmp/metrics
           gunicorn --bind 0.0.0.0:8080 -c gunicorn_config.py "hubgrep_indexer:create_app()"
     tty: true
     networks:
