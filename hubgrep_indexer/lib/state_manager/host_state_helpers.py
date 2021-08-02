@@ -1,8 +1,15 @@
 import logging
 from typing import Union
 
-from hubgrep_indexer.constants import HOST_TYPE_GITHUB, HOST_TYPE_GITEA, HOST_TYPE_GITLAB
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager, Block
+from hubgrep_indexer.constants import (
+    HOST_TYPE_GITHUB,
+    HOST_TYPE_GITEA,
+    HOST_TYPE_GITLAB,
+)
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import (
+    AbstractStateManager,
+    Block,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +20,13 @@ class IStateHelper:
     empty_results_max = 100
 
     @classmethod
-    def resolve_state(cls, hosting_service_id: str,
-                      state_manager: AbstractStateManager,
-                      block_uid: str,
-                      parsed_repos: list) -> Union[bool, None]:
+    def resolve_state(
+        cls,
+        hosting_service_id: str,
+        state_manager: AbstractStateManager,
+        block_uid: str,
+        parsed_repos: list,
+    ) -> Union[bool, None]:
         """
         Default implementation for resolving if we have consumed all
         repositories available, and its time to start over.
@@ -76,25 +86,30 @@ class IStateHelper:
             else:
                 repo_id = block.to_id
             state_manager.set_highest_confirmed_block_repo_id(
-                hoster_prefix=hosting_service_id, repo_id=repo_id)
+                hoster_prefix=hosting_service_id, repo_id=repo_id
+            )
 
         # finally return and terminate the while loop
         return state_manager.get_is_run_finished(hosting_service_id)
 
     @classmethod
-    def has_too_many_consecutive_empty_results(cls,
-                                               hosting_service_id: str,
-                                               state_manager: AbstractStateManager) -> bool:
-        has_too_many_empty_results = state_manager.get_empty_results_counter(
-            hoster_prefix=hosting_service_id) >= cls.empty_results_max
+    def has_too_many_consecutive_empty_results(
+        cls, hosting_service_id: str, state_manager: AbstractStateManager
+    ) -> bool:
+        has_too_many_empty_results = (
+            state_manager.get_empty_results_counter(hoster_prefix=hosting_service_id)
+            >= cls.empty_results_max
+        )
         return has_too_many_empty_results
 
     @classmethod
-    def has_reached_end(cls,
-                        hosting_service_id: str,
-                        state_manager: AbstractStateManager,
-                        block: Block,
-                        parsed_repos: list) -> bool:
+    def has_reached_end(
+        cls,
+        hosting_service_id: str,
+        state_manager: AbstractStateManager,
+        block: Block,
+        parsed_repos: list,
+    ) -> bool:
         """
         Try to find out if we reached the end of repos on this hoster.
 
@@ -123,11 +138,13 @@ class IStateHelper:
 
 class GitHubStateHelper(IStateHelper):
     @classmethod
-    def has_reached_end(cls,
-                        hosting_service_id: str,
-                        state_manager: AbstractStateManager,
-                        block: Block,
-                        parsed_repos: list) -> bool:
+    def has_reached_end(
+        cls,
+        hosting_service_id: str,
+        state_manager: AbstractStateManager,
+        block: Block,
+        parsed_repos: list,
+    ) -> bool:
         """
         We default to False for GitHub as we receive lots of gaps within results.
         Maybe a whole block contains private
@@ -152,6 +169,6 @@ def get_state_helper(hosting_service_type):
     state_helpers = {
         HOST_TYPE_GITHUB: GitHubStateHelper,
         HOST_TYPE_GITEA: GiteaStateHelper,
-        HOST_TYPE_GITLAB: GitLabStateHelper
+        HOST_TYPE_GITLAB: GitLabStateHelper,
     }
     return state_helpers[hosting_service_type]()

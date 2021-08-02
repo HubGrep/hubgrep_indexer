@@ -3,6 +3,7 @@ import time
 import uuid
 import logging
 
+from flask import current_app
 from typing import Dict, Union
 
 logger = logging.getLogger(__name__)
