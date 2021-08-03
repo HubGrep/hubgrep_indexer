@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 import logging
 
-import datetime
 from typing import List, Dict
 
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -14,8 +13,8 @@ from sqlalchemy import func
 from flask import current_app
 
 from hubgrep_indexer import db
-from hubgrep_indexer.models.repositories.abstract_repository import Repository
 from hubgrep_indexer.models.export_meta import ExportMeta
+from hubgrep_indexer.models.repositories.abstract_repository import Repository
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +43,8 @@ class HostingService(db.Model):
         """
         query = ExportMeta.query.filter_by(
             hosting_service_id=self.id, is_raw=(not unified)
-        ).filter(ExportMeta.file_path != None)
-        query.order_by(ExportMeta.created_at.desc())
+        ).filter(ExportMeta.file_path is not None)
+        query = query.order_by(ExportMeta.created_at.desc()).all()
 
         results_base_url = current_app.config["RESULTS_BASE_URL"]
         exports = []
@@ -59,45 +58,6 @@ class HostingService(db.Model):
                 )
             )
         return exports
-
-    def _get_default_export_filename(self, timestamp: datetime.datetime, unified=False):
-        """
-        returns something like "codeberg.org_unified_20211231_1200.csv.gz"
-        """
-        date_str = timestamp.strftime("%Y%m%d_%H%M")
-        export_base_name = f"{self.hoster_name}"
-        export_base_name += "_unified" if unified else "_raw"
-        filename_suffix = f"_{date_str}.csv.gz"
-        export_filename = export_base_name + filename_suffix
-        return export_filename
-
-    def export_repositories(self, table_name, unified=False, export_filename=None):
-        """
-        Export this hosters repositories to a gzipped json file.
-
-        returns `Export` (needs to be commited to the db!)
-        """
-        now = datetime.datetime.now()
-        if not export_filename:
-            export_filename = self._get_default_export_filename(now, unified)
-
-        logger.debug(f"exporting repos for {self}...")
-        repo_class: Repository = Repository.repo_class_for_type(self.type)
-        before = time.time()
-        if not unified:
-            repo_class.export_csv_gz(table_name, self, export_filename)
-        else:
-            repo_class.export_unified_csv_gz(table_name, self, export_filename)
-        repo_count = self.count_repos()
-        logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
-
-        export = ExportMeta()
-        export.created_at = now
-        export.file_path = export_filename
-        export.hosting_service_id = self.id
-        export.repo_count = repo_count
-        export.is_raw = not unified
-        return export
 
     def get_crawler_request_headers(self):
         """
@@ -142,6 +102,23 @@ class HostingService(db.Model):
             d["api_key"] = api_key
             d["crawler_request_headers"] = self.get_crawler_request_headers()
         return d
+
+    def export_repos(self):
+        before = time.time()
+        # make temp table
+        repo_class = Repository.repo_class_for_type(self.type)
+        with repo_class.make_tmp_table(self) as tmp_table:
+            logger.info(f"{self}: exporting raw!")
+            export = ExportMeta.create_export(self, tmp_table, unified=False)
+            db.session.add(export)
+            db.session.commit()
+
+            logger.info(f"{self}: exporting unified!")
+            export = ExportMeta.create_export(self, tmp_table, unified=True)
+            db.session.add(export)
+            db.session.commit()
+
+        logger.debug(f"exported repos for {self} - took {time.time() - before}s")
 
     @classmethod
     def from_dict(cls, d: dict):

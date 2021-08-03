@@ -15,3 +15,6 @@ scrape_configs:
   - targets: ['cadvisor:8080']
     labels:
       service: cadvisor
+  - targets: ['postgres_prometheus_exporter:8080']
+    labels:
+      service: postgres

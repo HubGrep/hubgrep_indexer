@@ -1,6 +1,5 @@
 import base64
 from iso8601 import iso8601
-import json
 import logging
 from typing import Dict
 
@@ -17,7 +16,9 @@ class GithubRepository(Repository):
     github_id = db.Column(db.Integer)  # "MDEwOlJlcG9zaXRvcnkxNzU1ODIyNg==",
     name = db.Column(db.String(200))  # "service.subtitles.thelastfantasy",
     homepage_url = db.Column(db.String(500))  # "homepageUrl": null,
-    url = db.Column(db.String(500))  # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
+    url = db.Column(
+        db.String(500)
+    )  # "url": "https://github.com/taxigps/service.subtitles.thelastfantasy",
     created_at = db.Column(db.DateTime)  # "createdAt": "2014-03-09T05:10:10Z",
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
@@ -37,15 +38,20 @@ class GithubRepository(Repository):
     fork_count = db.Column(db.Integer)  # "forkCount": 0,
     disk_usage = db.Column(db.Integer)  # "diskUsage": 192,
     owner_login = db.Column(
-        db.String(200))  # "owner": {"login": "taxigps","id": "MDQ6VXNlcjEwMjQzNA==","url": "https://github.com/taxigps"
+        db.String(200)
+    )  # "owner": {"login": "taxigps","id": "MDQ6VXNlcjEwMjQzNA==","url": "https://github.com/taxigps"
     # "repositoryTopics": {
     #    "nodes": []
     # },
-    primary_language_name = db.Column(db.String(200))  # "primaryLanguage": {"name": "Python"},
+    primary_language_name = db.Column(
+        db.String(200)
+    )  # "primaryLanguage": {"name": "Python"},
     license_name = db.Column(
-        db.String(200))  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
+        db.String(200)
+    )  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
     license_nickname = db.Column(
-        db.String(200))  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
+        db.String(200)
+    )  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
 
     unified_select_statement_template = """
     select
@@ -65,12 +71,10 @@ class GithubRepository(Repository):
         false as is_mirror,
         homepage_url as homepage_url,
         url as repo_url
-    from 
+    from
         {TABLE_NAME}
-    where 
+    where
         hosting_service_id = {HOSTING_SERVICE_ID}
-    and
-        is_completed = true
     """
 
     @classmethod
@@ -85,41 +89,41 @@ class GithubRepository(Repository):
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GithubRepository":
-        owner_login = d['owner']['login']
-        name = d['name']
-        github_id = cls.github_id_from_base64(d['id'])
+        owner_login = d["owner"]["login"]
+        name = d["name"]
+        github_id = cls.github_id_from_base64(d["id"])
 
         repo = cls()
 
         repo.hosting_service_id = hosting_service_id
         repo.github_id = github_id
         repo.name = cls.clean_string(name)
-        repo.homepage_url = d['homepageUrl']
-        repo.url = d['url']
-        repo.created_at = iso8601.parse_date(d['createdAt'])
-        repo.updated_at = iso8601.parse_date(d['updatedAt'])
-        if d.get('pushedAt', None):
-            repo.pushed_at = iso8601.parse_date(d['pushedAt'])
+        repo.homepage_url = d["homepageUrl"]
+        repo.url = d["url"]
+        repo.created_at = iso8601.parse_date(d["createdAt"])
+        repo.updated_at = iso8601.parse_date(d["updatedAt"])
+        if d.get("pushedAt", None):
+            repo.pushed_at = iso8601.parse_date(d["pushedAt"])
         else:
             repo.pushed_at = None
-        repo.short_description_html = cls.clean_string(d['shortDescriptionHTML'])
-        repo.description = cls.clean_string(d['description'])
-        repo.is_archived = d['isArchived']
-        repo.is_private = d['isPrivate']
-        repo.is_fork = d['isFork']
-        repo.is_empty = d['isEmpty']
-        repo.is_disabled = d['isDisabled']
-        repo.is_locked = d['isLocked']
-        repo.is_template = d['isTemplate']
-        repo.stargazer_count = d['stargazerCount']
-        repo.fork_count = d['forkCount']
-        repo.disk_usage = d['diskUsage']
+        repo.short_description_html = cls.clean_string(d["shortDescriptionHTML"])
+        repo.description = cls.clean_string(d["description"])
+        repo.is_archived = d["isArchived"]
+        repo.is_private = d["isPrivate"]
+        repo.is_fork = d["isFork"]
+        repo.is_empty = d["isEmpty"]
+        repo.is_disabled = d["isDisabled"]
+        repo.is_locked = d["isLocked"]
+        repo.is_template = d["isTemplate"]
+        repo.stargazer_count = d["stargazerCount"]
+        repo.fork_count = d["forkCount"]
+        repo.disk_usage = d["diskUsage"]
         repo.owner_login = cls.clean_string(owner_login)
-        if isinstance(d['primaryLanguage'], dict):
-            repo.primary_language_name = d['primaryLanguage'].get('name', None)
-        if isinstance(d['licenseInfo'], dict):
-            repo.license_name = d['licenseInfo'].get('name', None)
-            repo.license_nickname = d['licenseInfo'].get('nickname', None)
+        if isinstance(d["primaryLanguage"], dict):
+            repo.primary_language_name = d["primaryLanguage"].get("name", None)
+        if isinstance(d["licenseInfo"], dict):
+            repo.license_name = d["licenseInfo"].get("name", None)
+            repo.license_nickname = d["licenseInfo"].get("nickname", None)
 
         return repo
 

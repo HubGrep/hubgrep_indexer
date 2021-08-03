@@ -21,12 +21,14 @@ def hosters():
         if not authorized, it just returns a list of the hosting services.
 
     POST:
-        the payload is validated as a new hosting service to add. 
+        the payload is validated as a new hosting service to add.
     """
     if request.method == "GET":
         hosting_services = []
         for hosting_service in HostingService.query.all():
-            hosting_services.append(hosting_service.to_dict(include_secrets=current_user.is_authenticated))
+            hosting_services.append(
+                hosting_service.to_dict(include_secrets=current_user.is_authenticated)
+            )
         return jsonify(hosting_services)
 
     elif request.method == "POST":
@@ -44,31 +46,34 @@ def hosters():
         # test if hoster dict is valid
         if not HostingServiceValidator.test_hoster_is_valid(hosting_service):
             logger.debug(f"invalid hoster: {hosting_service}")
-            return jsonify(dict(
-                added=False,
-                reason="wrong_response"
-                #reason="A response from the hoster did not look like we expected - are you sure this is correct?"
-                ))
+            return jsonify(
+                dict(
+                    added=False,
+                    reason="wrong_response"
+                    # reason="A response from the hoster did not look like we expected - are you sure this is correct?"
+                )
+            )
 
         # test if we already have this hoster
         if HostingService.query.filter_by(api_url=hosting_service.api_url).first():
             logger.debug(f"hoster already in list: {hosting_service}")
-            return jsonify(dict(
-                added=False,
-                reason="already_in_list"
-                #reason="Thanks, but we already have this hoster in our list! :)"
-                ))
+            return jsonify(
+                dict(
+                    added=False,
+                    reason="already_in_list"
+                    # reason="Thanks, but we already have this hoster in our list! :)"
+                )
+            )
 
         # otherwise, add the new hoster!
         logger.info(f"adding hoster {hosting_service}")
         db.session.add(hosting_service)
         db.session.commit()
         return jsonify(
-                dict(
-                    added=True,
-                    hosting_service=hosting_service.to_dict(),
-                    ))
+            dict(
+                added=True,
+                hosting_service=hosting_service.to_dict(),
+            )
+        )
     else:
         return "login required", 401
-
-

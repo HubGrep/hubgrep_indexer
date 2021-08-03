@@ -4,9 +4,14 @@ import requests
 
 from hubgrep_indexer.models.hosting_service import HostingService
 
-from hubgrep_indexer.constants import HOST_TYPE_GITEA, HOST_TYPE_GITHUB, HOST_TYPE_GITLAB
+from hubgrep_indexer.constants import (
+    HOST_TYPE_GITEA,
+    HOST_TYPE_GITHUB,
+    HOST_TYPE_GITLAB,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class HostingServiceValidator:
     @classmethod
@@ -57,15 +62,13 @@ class HostingServiceValidator:
         check if a hosting service is valid by checking http responses
         """
         hosting_service_tests = {
-                HOST_TYPE_GITEA: HostingServiceValidator._is_gitea_hoster,
-                HOST_TYPE_GITHUB: HostingServiceValidator._is_github_hoster,
-                HOST_TYPE_GITLAB: HostingServiceValidator._is_gitlab_hoster
-            }
+            HOST_TYPE_GITEA: HostingServiceValidator._is_gitea_hoster,
+            HOST_TYPE_GITHUB: HostingServiceValidator._is_github_hoster,
+            HOST_TYPE_GITLAB: HostingServiceValidator._is_gitlab_hoster,
+        }
         test_function = hosting_service_tests[hosting_service.type]
         is_valid = test_function(hosting_service)
         if not is_valid:
             logger.warning(f"negative validation for {hosting_service}")
 
         return is_valid
-
-

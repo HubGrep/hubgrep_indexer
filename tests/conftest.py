@@ -2,21 +2,21 @@ import redislite
 import os
 import tempfile
 import pytest
-import uuid
+
+from hubgrep_indexer.lib.init_logging import init_logging
 
 from hubgrep_indexer import create_app, db, state_manager
-from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.hosting_service import HostingService
+from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
 from hubgrep_indexer.models.repositories.github import GithubRepository
 from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
 from hubgrep_indexer.constants import (
     HOST_TYPE_GITHUB,
-    HOST_TYPE_GITLAB,
-    HOST_TYPE_GITEA,
 )
 from tests.helpers import HOSTER_TYPES
 
+init_logging()
 
 @pytest.fixture(scope="function")
 def test_app(request):
@@ -112,9 +112,9 @@ def hosting_service(test_app, request):
     if hosting_service_type not in HOSTER_TYPES:
         raise ValueError(f'invalid hosting_service_type: "{hosting_service_type}" - should be one of: {HOSTER_TYPES}')
 
-    api_url = f"https://api.test-{hosting_service_type}-{uuid.uuid4().hex}.com/"
+    api_url = f"https://test_{hosting_service_type}.com/"
     with test_app.app_context():
-        hosting_service = _add_hosting_service(api_url=api_url, type=hosting_service_type)
+        hosting_service = _add_hosting_service(api_url=api_url, landingpage_url=api_url, type=hosting_service_type)
         redis_prefix = hosting_service.id
 
     yield hosting_service
