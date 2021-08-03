@@ -75,6 +75,8 @@ class GithubRepository(Repository):
         {TABLE_NAME}
     where
         hosting_service_id = {HOSTING_SERVICE_ID}
+    and
+        is_completed = true
     """
 
     @classmethod
