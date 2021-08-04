@@ -1,8 +1,6 @@
 import time
 import logging
-from typing import List
 
-from hubgrep_indexer.constants import STATE_CRAWLER_API_KEY_EXPIRATION
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from hubgrep_indexer.lib.block import Block
 
@@ -28,16 +26,12 @@ class RedisStateManager(AbstractStateManager):
         self.highest_confirmed_block_repo_id_key = "highest_confirmed_block_repo_id"
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
-        self.crawler_api_key_key = "crawler_api_key"
-        self.api_key_crawlers_key = "crawlers_by_api_key"
+        self.machine_api_key_key = "machine_api_key"
+        self.active_api_keys_key = "active_api_key"
 
     @classmethod
     def _get_redis_key(cls, key_prefix: str, key: str):
         return f"{key_prefix}:{key}"
-
-    @classmethod
-    def _get_crawler_key(cls, crawler_id: str, crawler_address: str, key: str):
-        return cls._get_redis_key(f"{crawler_id}@{crawler_address}", key)
 
     def get_lock(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.lock_key)
@@ -133,24 +127,27 @@ class RedisStateManager(AbstractStateManager):
             blocks[block.uid] = block
         return blocks
 
-    def get_crawlers_by_api_key(self, api_key: str) -> List[str]:
-        redis_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
-        return self.redis.lrange(redis_key, 0, -1)
+    def get_machine_api_key(self, machine_id: str) -> str:
+        machine_key = self._get_redis_key(machine_id, self.machine_api_key_key)
+        api_key = self.redis.get(machine_key)
+        if api_key:
+            api_key = api_key.decode("utf-8")
+        return api_key
 
-    def remove_crawler_from_api_key(self, api_key: str, crawler_id_key: str):
-        redis_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
-        return self.redis.lrem(redis_key, 1, crawler_id_key)
+    def set_machine_api_key(self, machine_id: str, api_key: str):
+        # store the api_key behind a machine_id key
+        machine_key = self._get_redis_key(machine_id, self.machine_api_key_key)
+        self.redis.set(machine_key, api_key)
 
-    def get_crawler_api_key(self, crawler_id: str, crawler_address: str) -> str:
-        redis_key = self._get_crawler_key(crawler_id, crawler_address, self.crawler_api_key_key)
-        # refresh expiration when polling
-        self.redis.expireat(redis_key, when=time.time() + STATE_CRAWLER_API_KEY_EXPIRATION)
-        return self.redis.get(redis_key)
+        # register all api_keys which are in use (by storing the machine_key attached to it)
+        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
+        self.redis.set(api_key_key, machine_key)
 
-    def set_crawler_api_key(self, crawler_id: str, crawler_address: str, api_key: str):
-        # store the api_key behind a crawler_id key
-        redis_crawler_key = self._get_crawler_key(crawler_id, crawler_address, self.crawler_api_key_key)
-        self.redis.set(redis_crawler_key, api_key, ex=time.time() + STATE_CRAWLER_API_KEY_EXPIRATION)
-        # store/append the crawler_id_key behind the api_key
-        redis_api_key_key = self._get_redis_key(api_key, self.api_key_crawlers_key)
-        self.redis.lpush(redis_api_key_key, redis_crawler_key)
+    def remove_active_api_key(self, api_key: str):
+        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
+        machine_key = self.redis.get(api_key_key)
+        self.redis.delete(api_key_key, machine_key)
+
+    def is_api_key_active(self, api_key: str) -> bool:
+        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
+        return bool(self.redis.exists(api_key_key))

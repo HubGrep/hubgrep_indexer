@@ -100,10 +100,17 @@ def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict,
 def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
     crawler_id = request.headers.get("X-Correlation-ID", "no-crawler-id")
     machine_id = request.headers.get("Hubgrep-Crawler-Machine-ID", "no-machine-id")
-    logger.debug(f"resolving {hosting_service} api_key for machine-id: {machine_id}")
 
-    # TODO resolve a single api_key here from multiple keys
-    api_key = None
-    if hosting_service.api_keys and len(hosting_service.api_keys) > 0:
-        api_key = hosting_service.api_keys[0]
+    api_key = state_manager.get_machine_api_key(machine_id=machine_id)
+    if not api_key:
+        for _api_key in hosting_service.api_keys:
+            if not state_manager.is_api_key_active(api_key=_api_key):
+                state_manager.set_machine_api_key(machine_id=machine_id, api_key=_api_key)
+                api_key = _api_key
+                logger.info(f"crawler_id: {crawler_id} - assigned api_key: {api_key} to machine_id: {machine_id}")
+                break
+            # potentially, all keys are active - atm. we don't allow more machines and resolve with no key
+            api_key = None
+
+    logger.debug(f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {api_key} for machine: {machine_id}")
     return api_key
