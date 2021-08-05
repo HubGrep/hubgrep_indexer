@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _state_is_too_old(state):
-    ts_old_run = time.time() - current_app.config['OLD_RUN_AGE']
+    ts_old_run = time.time() - current_app.config["OLD_RUN_AGE"]
     created_ts_too_old = state["run_created_ts"] < ts_old_run
     if not state["run_is_finished"] or created_ts_too_old:
         return True

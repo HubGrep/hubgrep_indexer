@@ -5,6 +5,7 @@ from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractSta
 from hubgrep_indexer.lib.block import Block
 
 import redis
+import redislite
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class RedisStateManager(AbstractStateManager):
 
     def __init__(self):
         super().__init__()
-        self.redis = redis.from_url("redis://localhost")
+        self.redis = None
 
         self.lock_key = "lock"
 
@@ -28,6 +29,13 @@ class RedisStateManager(AbstractStateManager):
         self.run_is_finished_key = "run_is_finished"
         self.machine_api_key_key = "machine_api_key"
         self.active_api_keys_key = "active_api_key"
+
+    def init_app(self, app, *args, **kwargs):
+        redis_url = app.config["REDIS_URL"]
+        if redis_url:
+            self.redis = redis.from_url(redis_url)
+        else:
+            self.redis = redislite.Redis()
 
     @classmethod
     def _get_redis_key(cls, key_prefix: str, key: str):
@@ -52,11 +60,15 @@ class RedisStateManager(AbstractStateManager):
         return highest_repo_id
 
     def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id: int):
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
+        redis_key = self._get_redis_key(
+            hoster_prefix, self.highest_confirmed_block_repo_id_key
+        )
         self.redis.set(redis_key, repo_id)
 
     def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
-        redis_key = self._get_redis_key(hoster_prefix, self.highest_confirmed_block_repo_id_key)
+        redis_key = self._get_redis_key(
+            hoster_prefix, self.highest_confirmed_block_repo_id_key
+        )
         repo_id_str: str = self.redis.get(redis_key)
         if not repo_id_str:
             highest_repo_id = 0
@@ -110,7 +122,9 @@ class RedisStateManager(AbstractStateManager):
             # only update existing blocks
             self.redis.hset(redis_key, block.uid, block.to_json())
         else:
-            logger.info(f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}")
+            logger.info(
+                f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}"
+            )
 
     def _delete_block(self, hoster_prefix: str, block_uid: str):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)

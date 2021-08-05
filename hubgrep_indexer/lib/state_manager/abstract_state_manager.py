@@ -16,6 +16,9 @@ class AbstractStateManager:
         self.batch_size = batch_size  # block size for a crawler
         self.block_timeout = block_timeout  # seconds
 
+    def init_app(self, *args, **kwargs):
+        pass
+
     def get_state_dict(self, hoster_prefix: str) -> Dict:
         return dict(
             highest_block_repo_id=self.get_highest_block_repo_id(hoster_prefix),
@@ -166,85 +169,3 @@ class AbstractStateManager:
         return None
 
 
-class LocalStateManager(AbstractStateManager):
-    """
-    Local state manager, using plain dicts for storage.
-
-    Stored in memory, at runtime, as a convenience class for testing without overhead.
-    """
-
-    def __init__(self):
-        super().__init__()
-
-        #
-        # blocks: {"hoster_prefix": {"uuid": block}
-        # current_highest_repo_ids = {"hoster_prefix" : {current_highest_repo_id": 0}
-        self.blocks: Dict[str, Dict[str, Block]] = {}
-        self.current_highest_repo_ids = {}
-        self.highest_confirmed_repo_ids = {}
-        self.empty_results_counter = {}
-        self.run_created_timestamps = {}
-
-        # bools, if the run, started at created_at is finished
-        self.run_is_finished = {}
-
-    def push_new_block(self, hoster_prefix, block: Block) -> None:
-        if not self.blocks.get(hoster_prefix, False):
-            self.blocks[hoster_prefix] = {}
-        self.blocks[hoster_prefix][block.uid] = block
-
-    def get_blocks(self, hoster_prefix) -> Dict[str, Block]:
-        return self.blocks.get(hoster_prefix, {})
-
-    def set_highest_block_repo_id(self, hoster_prefix, repo_id) -> None:
-        self.current_highest_repo_ids[hoster_prefix] = repo_id
-
-    def get_highest_block_repo_id(self, hoster_prefix) -> int:
-        if not self.current_highest_repo_ids.get(hoster_prefix, False):
-            self.current_highest_repo_ids[hoster_prefix] = 0
-        return self.current_highest_repo_ids[hoster_prefix]
-
-    def update_block(self, hoster_prefix: str, block: Block):
-        """Store changes applied to a block."""
-        old_block = self.get_block(hoster_prefix=hoster_prefix, block_uid=block.uid)
-        if old_block:
-            self.blocks[hoster_prefix][block.uid] = block
-        else:
-            logger.info(f"no action taken - attempted to update non-existing block state, uid: {block.uid}")
-
-    def _delete_block(self, hoster_prefix, block_uid: str) -> Block:
-        hoster_blocks = self.blocks[hoster_prefix]
-        block = hoster_blocks.pop(block_uid)
-        return block
-
-    def set_highest_confirmed_block_repo_id(self, hoster_prefix: str, repo_id: int):
-        self.highest_confirmed_repo_ids[hoster_prefix] = repo_id
-
-    def get_highest_confirmed_block_repo_id(self, hoster_prefix: str) -> int:
-        if not self.highest_confirmed_repo_ids.get(hoster_prefix, False):
-            self.highest_confirmed_repo_ids[hoster_prefix] = 0
-        return self.highest_confirmed_repo_ids[hoster_prefix]
-
-    def set_run_created_ts(self, hoster_prefix, timestamp: float = None):
-        if timestamp is None:
-            timestamp = time.time()
-        self.run_created_timestamps[hoster_prefix] = timestamp
-
-    def get_run_created_ts(self, hoster_prefix):
-        if not self.run_created_timestamps.get(hoster_prefix, False):
-            self.set_run_created_ts(hoster_prefix, 0)
-        return self.run_created_timestamps[hoster_prefix]
-
-    def get_is_run_finished(self, hoster_prefix) -> bool:
-        return self.run_is_finished.get(hoster_prefix, False)
-
-    def set_is_run_finished(self, hoster_prefix, is_finished: bool):
-        self.run_is_finished[hoster_prefix] = is_finished
-
-    def set_empty_results_counter(self, hoster_prefix: str, count: int):
-        self.empty_results_counter[hoster_prefix] = count
-
-    def get_empty_results_counter(self, hoster_prefix: str) -> int:
-        if not self.empty_results_counter.get(hoster_prefix, False):
-            self.set_empty_results_counter(hoster_prefix, 0)
-        return self.empty_results_counter[hoster_prefix]

@@ -42,11 +42,12 @@ class TestBlockHelpers:
             # we create two hosters, and explicitly set one to a very low 
             # timestamp, so it needs to be crawled,
             # and one to "now", so it has its timeout
-            timed_out_hosting_service = hosting_service
-            recent_hosting_service = hosting_service_2
+            timed_out_hosting_service = hosting_service_github_1
+            recent_hosting_service = hosting_service_github_2
 
-            state_manager.set_run_created_ts(timed_out_hosting_service.id, 0)
-            state_manager.set_run_created_ts(recent_hosting_service.id, time.time())
+            test_state_manager.set_run_created_ts(timed_out_hosting_service.id, 0)
+            test_state_manager.set_run_created_ts(recent_hosting_service.id, time.time())
 
             block_dict = get_loadbalanced_block_for_crawler(hosting_service.type)
             assert block_dict["hosting_service"]["id"] == timed_out_hosting_service.id
+

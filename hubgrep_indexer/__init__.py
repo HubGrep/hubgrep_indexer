@@ -1,7 +1,6 @@
 import os
 import time
 import base64
-import redis
 import logging
 import binascii
 from werkzeug.serving import WSGIRequestHandler
@@ -21,6 +20,7 @@ migrate = Migrate()
 state_manager = RedisStateManager()
 login_manager = LoginManager()
 
+app = Flask(__name__)
 # fix keep-alive in dev server (dropped connections from client sessions)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
@@ -28,26 +28,25 @@ WSGIRequestHandler.protocol_version = "HTTP/1.1"
 def create_app():
     app = Flask(__name__)
 
-    app_env = os.environ.get('APP_ENV', 'dotenv')
+    app_env = os.environ.get("APP_ENV", "dotenv")
     config_mapping = {
-        'testing': 'hubgrep_indexer.config.testing.TestingConfig',
-        'dotenv': 'hubgrep_indexer.config.dotenv.DotEnvConfig',
+        "testing": "hubgrep_indexer.config.testing.TestingConfig",
+        "dotenv": "hubgrep_indexer.config.dotenv.DotEnvConfig",
     }
 
     print(f"starting in {app_env} config")
 
     app.config.from_object(config_mapping[app_env])
 
-    # todo: make init_app function?
-    state_manager.redis = redis.from_url(app.config['REDIS_URL'])
+    state_manager.init_app(app)
 
-    init_logging(loglevel=app.config['LOGLEVEL'])
+    init_logging(loglevel=app.config["LOGLEVEL"])
 
     db.init_app(app)
     migrate.init_app(app, db=db)
 
     login_manager.init_app(app)
-    user_crawlers = User(api_key=app.config['INDEXER_API_KEY'])
+    user_crawlers = User(api_key=app.config["INDEXER_API_KEY"])
 
     @app.before_request
     def log_crawler_ids():
@@ -86,6 +85,7 @@ def create_app():
     app.register_blueprint(frontend)
     app.register_blueprint(cli_bp)
     app.register_blueprint(results_bp)
+
     return app
 
 
@@ -98,15 +98,15 @@ class User(UserMixin):
 
 def is_user_authenticated(request, user):
     # first, try to login using the api_key url arg
-    api_key = request.args.get('api_key')
+    api_key = request.args.get("api_key")
     if api_key:
         if api_key == user.api_key:
             return user
 
     # next, try to login using Basic Auth
-    api_key = request.headers.get('Authorization')
+    api_key = request.headers.get("Authorization")
     if api_key:
-        api_key = api_key.replace('Basic ', '', 1)
+        api_key = api_key.replace("Basic ", "", 1)
         try:
             api_key = base64.b64decode(api_key)
         except (TypeError, binascii.Error):

@@ -3,18 +3,19 @@ import pytest
 import time
 from multiprocessing import Process
 
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import LocalStateManager, AbstractStateManager
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
 HOSTER_PREFIX = "hoster_1"
 
 
-class TestLocalStateManager:
+class TestRedisStateManager:
     @pytest.fixture()
-    def state_manager(self):
-        manager = LocalStateManager()
+    def state_manager(self, test_app):
+        manager = RedisStateManager()
+        manager.redis = redislite.Redis()
         yield manager
-        manager.reset(HOSTER_PREFIX)
+        manager.reset(hoster_prefix=HOSTER_PREFIX)
 
     def test_set_get_highest_repo_id(self, state_manager: AbstractStateManager):
         assert state_manager.get_highest_block_repo_id(
@@ -142,14 +143,6 @@ class TestLocalStateManager:
         assert old_block.uid not in new_blocks
         assert new_block.uid in new_blocks
 
-
-class TestRedisStateManager(TestLocalStateManager):
-    @pytest.fixture()
-    def state_manager(self, test_app):
-        manager = RedisStateManager()
-        manager.redis = redislite.Redis()
-        yield manager
-        manager.reset(hoster_prefix=HOSTER_PREFIX)
 
     @pytest.mark.timeout(5)
     def test_get_lock_is_blocking(self, state_manager):

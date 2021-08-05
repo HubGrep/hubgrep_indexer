@@ -1,0 +1,95 @@
+version: "3.1"
+
+services:
+  postgres:
+    image: postgres:13
+    env_file: .env
+    networks:
+      - hubgrep_indexer
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - hubgrep_indexer
+
+  hubgrep_indexer:
+    build: 
+      context: .
+      dockerfile: Dockerfile.prod
+
+    volumes:
+      - ./results:/var/results
+
+    restart: "${RESTART:-no}"
+    mem_limit: 500m
+
+    # uplink port to host
+    ports:
+      - 8081:8080
+
+    env_file: .env
+    environment:
+      FLASK_APP: "/var/task/hubgrep_indexer/__init__:create_app"
+
+    command:
+      - /bin/bash
+      - -c
+      - |
+          gunicorn --bind 0.0.0.0:8080 -c gunicorn_config.py "hubgrep_indexer:create_app()"
+    tty: true
+    networks:
+      - hubgrep_indexer
+      - hubgrep
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+        - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - hubgrep_indexer
+      - hubgrep
+    mem_limit: 1024m
+    command: 
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.console.libraries=/usr/share/prometheus/console_libraries
+        - --web.console.templates=/usr/share/prometheus/consoles
+        - --storage.tsdb.retention.time=7d
+
+  # system metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - hubgrep_indexer
+
+  # postgres metrics
+  postgres_prometheus_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    environment: 
+      DATA_SOURCE_URI: postgres/${POSTGRES_DB}?sslmode=disable
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD}
+      DATA_SOURCE_USER: ${POSTGRES_USER}
+      PG_EXPORTER_WEB_LISTEN_ADDRESS: 0.0.0.0:8080
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    networks:
+      - hubgrep_indexer
+
+
+
+networks:
+  hubgrep_indexer:
+  hubgrep:
+    name: hubgrep
+

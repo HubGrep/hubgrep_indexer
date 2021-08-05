@@ -10,3 +10,5 @@ htmlcov/
 hosters.json
 results/
 sync_*
+postgres_data/
+backup_*
