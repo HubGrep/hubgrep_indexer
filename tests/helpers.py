@@ -20,11 +20,11 @@ def get_mock_repos(hosting_service_type: str):
     return MOCK_REPOS[hosting_service_type]
 
 
-def route_put_add_repos(test_app, hosting_service: HostingService, route: str, repos: list):
+def route_put_repos(test_client, hosting_service: HostingService, route: str, repos: list):
     """
     Add repos connected to a hosting_service (and assert that each repo has been inserted into DB).
     """
-    response = test_app.test_client().put(route, json=repos)
+    response = test_client.put(route, json=repos)
     repo_class = Repository.repo_class_for_type(hosting_service.type)
     new_repos = repo_class.query.all()
     assert response.status == "200 OK"

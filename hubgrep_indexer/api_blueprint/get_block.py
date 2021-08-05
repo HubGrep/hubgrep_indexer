@@ -14,11 +14,11 @@ from hubgrep_indexer.models.hosting_service import HostingService
 logger = logging.getLogger(__name__)
 
 
-@api.route("/hosters/<type>/loadbalanced_block")
+@api.route("/hosters/<hosting_service_type>/loadbalanced_block")
 @login_required
-def get_loadbalanced_block(type: str):
+def get_loadbalanced_block(hosting_service_type: str):
     ts_before = time.time()
-    block_dict = get_loadbalanced_block_for_crawler(hosting_service_type=type)
+    block_dict = get_loadbalanced_block_for_crawler(hosting_service_type=hosting_service_type)
     logger.debug(f"got a load-balanced block - took {time.time() - ts_before}s")
 
     if not block_dict:

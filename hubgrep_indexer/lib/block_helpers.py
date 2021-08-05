@@ -101,16 +101,16 @@ def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
     crawler_id = request.headers.get("X-Correlation-ID", "no-crawler-id")
     machine_id = request.headers.get("Hubgrep-Crawler-Machine-ID", "no-machine-id")
 
-    api_key = state_manager.get_machine_api_key(machine_id=machine_id)
-    if not api_key:
+    api_key = state_manager.get_machine_api_key(machine_id=machine_id) or None
+    if not api_key and hosting_service.api_keys:
         for _api_key in hosting_service.api_keys:
             if not state_manager.is_api_key_active(api_key=_api_key):
                 state_manager.set_machine_api_key(machine_id=machine_id, api_key=_api_key)
                 api_key = _api_key
                 logger.info(f"crawler_id: {crawler_id} - assigned api_key: {api_key} to machine_id: {machine_id}")
                 break
-            # potentially, all keys are active - atm. we don't allow more machines and resolve with no key
-            api_key = None
+            # potentially, all keys are active - we don't allow machines to share keys, so we resolve to None
+            # this also means we have to manually deactivate keys if we want to change machine-ids in crawlers
 
     logger.debug(f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {api_key} for machine: {machine_id}")
     return api_key

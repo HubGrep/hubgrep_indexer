@@ -11,12 +11,11 @@ from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
 from hubgrep_indexer.models.repositories.github import GithubRepository
 from hubgrep_indexer.models.repositories.gitlab import GitlabRepository
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-)
+
 from tests.helpers import HOSTER_TYPES
 
 init_logging()
+
 
 @pytest.fixture(scope="function")
 def test_app(request):
@@ -26,7 +25,7 @@ def test_app(request):
 
     with app.app_context():
         db.create_all()
-        # all tables should be wiped on startup, and between tests, in case anything was left over
+        # wipe all tables, in case anything was left over
         db.session.query(GiteaRepository).delete()
         db.session.query(GithubRepository).delete()
         db.session.query(GitlabRepository).delete()
@@ -68,7 +67,7 @@ def _add_hosting_service(api_url: str,
     hosting_service.api_url = api_url
     hosting_service.landingpage_url = landingpage_url
     hosting_service.type = type
-    hosting_service.api_key = api_key
+    hosting_service.api_keys = [api_key]
 
     db.session.add(hosting_service)
     db.session.commit()
@@ -77,40 +76,11 @@ def _add_hosting_service(api_url: str,
 
 
 @pytest.fixture(scope="function")
-def hosting_service_github_1(test_app, request):
-    api_url = f"https://api.{HOST_TYPE_GITHUB}1.com/"
-    with test_app.app_context():
-        hosting_service = _add_hosting_service(api_url=api_url, type=HOST_TYPE_GITHUB)
-        redis_prefix = hosting_service.id
-
-    yield hosting_service
-
-    def teardown():
-        state_manager.reset(redis_prefix)
-
-    request.addfinalizer(teardown)
-
-
-@pytest.fixture(scope="function")
-def hosting_service_github_2(test_app, request):
-    api_url = f"https://api.{HOST_TYPE_GITHUB}2.com/"
-    with test_app.app_context():
-        hosting_service = _add_hosting_service(api_url=api_url, type=HOST_TYPE_GITHUB)
-        redis_prefix = hosting_service.id
-
-    yield hosting_service
-
-    def teardown():
-        state_manager.reset(redis_prefix)
-
-    request.addfinalizer(teardown)
-
-
-@pytest.fixture(scope="function")
 def hosting_service(test_app, request):
     hosting_service_type = request.param
     if hosting_service_type not in HOSTER_TYPES:
-        raise ValueError(f'invalid hosting_service_type: "{hosting_service_type}" - should be one of: {HOSTER_TYPES}')
+        raise ValueError(
+            f'invalid hosting_service_type param: "{hosting_service_type}" - should be one of: {HOSTER_TYPES}')
 
     api_url = f"https://test_{hosting_service_type}.com/"
     with test_app.app_context():

@@ -1,11 +1,15 @@
-from hubgrep_indexer.models.hosting_service import HostingService
-from hubgrep_indexer.lib.hosting_service_validator import HostingServiceValidator
+import pytest
 from flask import current_app
 from unittest.mock import MagicMock
 
+from hubgrep_indexer.models.hosting_service import HostingService
+from hubgrep_indexer.lib.hosting_service_validator import HostingServiceValidator
+from tests.helpers import HOSTER_TYPES
+
+
 class TestHosters:
     def test_post_get_hosters(self, test_client):
-        with current_app.app_context() as app:
+        with current_app.app_context():
             assert HostingService.query.count() == 0
             payload = dict(
                 type="github",
@@ -24,7 +28,25 @@ class TestHosters:
             hosting_service = HostingService.query.first()
             assert hosting_service.type == "github"
 
-    def test_get_hosters(self, test_client, hosting_service_github_1):
+    @pytest.mark.parametrize(
+        'hosting_service',  # matched against hosting_service fixture in conftest.py
+        HOSTER_TYPES,
+        indirect=True
+    )
+    def test_get_hosters(self, test_client, hosting_service):
         response = test_client.get("/api/v1/hosters")
-        assert api_url == response.json[0]['api_url']
-        assert api_key in response.json[0]['api_keys']
+        assert response.json[0]["api_url"] == hosting_service.api_url
+        assert response.json[0].get("api_key", None) is None
+        assert response.json[0].get("api_keys", None) is None
+
+    @pytest.mark.parametrize(
+        'hosting_service',  # matched against hosting_service fixture in conftest.py
+        HOSTER_TYPES,
+        indirect=True
+    )
+    def test_get_hosters_authenticated(self, test_client, hosting_service):
+        response = test_client.get("/api/v1/hosters",
+                                   headers={"Authorization": f"Basic {current_app.config['INDEXER_API_KEY']}"})
+        assert response.json[0]["api_url"] == hosting_service.api_url
+        assert response.json[0].get("api_key", None) is None
+        assert response.json[0].get("api_keys", None) is not None
