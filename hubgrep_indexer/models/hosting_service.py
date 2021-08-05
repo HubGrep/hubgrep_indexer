@@ -43,7 +43,7 @@ class HostingService(db.Model):
         """
         query = ExportMeta.query.filter_by(
             hosting_service_id=self.id, is_raw=(not unified)
-        ).filter(ExportMeta.file_path is not None)
+        ).filter(ExportMeta.file_path != None)
         query = query.order_by(ExportMeta.created_at.desc()).all()
 
         results_base_url = current_app.config["RESULTS_BASE_URL"]
