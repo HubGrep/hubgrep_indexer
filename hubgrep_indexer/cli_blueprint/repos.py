@@ -3,7 +3,6 @@ import logging
 
 from hubgrep_indexer.models.hosting_service import HostingService, ExportMeta
 from hubgrep_indexer.cli_blueprint import cli_bp
-from hubgrep_indexer import db
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +14,7 @@ def export_repos(hosting_service):
         api_url=hosting_service
     ).first()
 
-    print(f"exporting raw repositories for {hosting_service}")
-    export = hosting_service.export_repositories(unified=False)
-    print(f"exported to {export.file_path}")
-    db.session.add(export)
-    db.session.commit()
-
-    print(f"exporting unified repositories for {hosting_service}")
-    export = hosting_service.export_repositories(unified=True)
-    print(f"exported to {export.file_path}")
-    db.session.add(export)
-    db.session.commit()
+    hosting_service.export_repos()
 
 
 @cli_bp.cli.command(help="remove old exports, keep the newest ones")
@@ -46,12 +35,18 @@ def prune_exports(keep, hosting_service=None):
         q = HostingService.query
     for hosting_service in q.all():
         old_exports_raw = (
-            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=True).filter(ExportMeta.file_path!=None)
+            ExportMeta.query.filter_by(
+                hosting_service_id=hosting_service.id, is_raw=True
+            )
+            .filter(ExportMeta.file_path is not None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
         old_exports_unified = (
-            ExportMeta.query.filter_by(hosting_service_id=hosting_service.id, is_raw=False).filter(ExportMeta.file_path!=None)
+            ExportMeta.query.filter_by(
+                hosting_service_id=hosting_service.id, is_raw=False
+            )
+            .filter(ExportMeta.file_path is not None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )

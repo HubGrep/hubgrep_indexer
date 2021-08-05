@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _state_is_too_old(state):
-    ts_old_run = time.time() - current_app.config['OLD_RUN_AGE']
+    ts_old_run = time.time() - current_app.config["OLD_RUN_AGE"]
     created_ts_too_old = state["run_created_ts"] < ts_old_run
     if not state["run_is_finished"] or created_ts_too_old:
         return True
@@ -77,11 +77,11 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     # remove everything finished recently
     crawlable_hosters = {}
     for hoster_id, state in hoster_id_state.items():
-        #logger.debug(f"checking hoster {hoster_id}")
+        # logger.debug(f"checking hoster {hoster_id}")
         if _state_is_too_old(state):
-            #logger.debug(f"hoster {hoster_id} would be crawlable...")
+            # logger.debug(f"hoster {hoster_id} would be crawlable...")
             crawlable_hosters[hoster_id] = state
-    
+
     if not crawlable_hosters:
         # everything up to date, nothing to do
         logger.warning("no crawlable hosters!")

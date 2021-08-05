@@ -27,10 +27,10 @@ WSGIRequestHandler.protocol_version = "HTTP/1.1"
 def create_app():
     app = Flask(__name__)
 
-    app_env = os.environ.get('APP_ENV', 'dotenv')
+    app_env = os.environ.get("APP_ENV", "dotenv")
     config_mapping = {
-        'testing': 'hubgrep_indexer.config.testing.TestingConfig',
-        'dotenv': 'hubgrep_indexer.config.dotenv.DotEnvConfig',
+        "testing": "hubgrep_indexer.config.testing.TestingConfig",
+        "dotenv": "hubgrep_indexer.config.dotenv.DotEnvConfig",
     }
 
     print(f"starting in {app_env} config")
@@ -39,13 +39,13 @@ def create_app():
 
     state_manager.init_app(app)
 
-    init_logging(loglevel=app.config['LOGLEVEL'])
+    init_logging(loglevel=app.config["LOGLEVEL"])
 
     db.init_app(app)
     migrate.init_app(app, db=db)
 
     login_manager.init_app(app)
-    user_crawlers = User(api_key=app.config['INDEXER_API_KEY'])
+    user_crawlers = User(api_key=app.config["INDEXER_API_KEY"])
 
     @login_manager.request_loader
     def load_user_from_request(request):
@@ -81,15 +81,15 @@ class User(UserMixin):
 
 def is_user_authenticated(request, user):
     # first, try to login using the api_key url arg
-    api_key = request.args.get('api_key')
+    api_key = request.args.get("api_key")
     if api_key:
         if api_key == user.api_key:
             return user
 
     # next, try to login using Basic Auth
-    api_key = request.headers.get('Authorization')
+    api_key = request.headers.get("Authorization")
     if api_key:
-        api_key = api_key.replace('Basic ', '', 1)
+        api_key = api_key.replace("Basic ", "", 1)
         try:
             api_key = base64.b64decode(api_key)
         except (TypeError, binascii.Error):
