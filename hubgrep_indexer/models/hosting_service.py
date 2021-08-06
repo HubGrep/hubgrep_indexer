@@ -81,7 +81,7 @@ class HostingService(db.Model):
     def get_service_label(self):
         return re.split("//", self.landingpage_url)[1].rstrip("/")
 
-    def to_dict(self, include_secrets: bool = False, api_key: str = None):
+    def to_dict(self, include_secrets: bool = False, include_exports: bool = False, api_key: str = None):
         """
         Dict representation for this HostingService.
 
@@ -94,15 +94,15 @@ class HostingService(db.Model):
             landingpage_url=self.landingpage_url,
             api_url=self.api_url,
             hoster_name=self.hoster_name,
-            exports_raw=self.get_exports_dict(unified=False),
-            exports_unified=self.get_exports_dict(unified=True),
         )
+        if api_key:
+            d["api_key"] = api_key
         if include_secrets:
-            if api_key:
-                d["api_key"] = api_key
-            else:
-                d["api_keys"] = self.api_keys
+            d["api_keys"] = self.api_keys
             d["crawler_request_headers"] = self.get_crawler_request_headers()
+        if include_exports:
+            d["exports_raw"] = self.get_exports_dict(unified=False)
+            d["exports_unified"] = self.get_exports_dict(unified=True)
         return d
 
     def export_repos(self):

@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 @cli_bp.cli.command(help="export hosting_service objects as json (printed out)")
-def export_hosters():
+@click.option('--include-exports', '-e', is_flag=True)
+def export_hosters(include_exports: bool = False):
     services = []
     for hosting_service in HostingService.query.all():
-        services.append(hosting_service.to_dict(include_secrets=True))
+        services.append(hosting_service.to_dict(include_secrets=True, include_exports=include_exports))
     print(json.dumps(services, indent=2))
 
 
