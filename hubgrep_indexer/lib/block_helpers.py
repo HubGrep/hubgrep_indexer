@@ -121,7 +121,7 @@ def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
                                                   api_key=_api_key)
                 api_key = _api_key
                 logger.info(
-                    f"crawler_id: {crawler_id} - assigned api_key: {obscurify_secret(api_key)} to machine_id: {machine_id}")
+                    f"crawler_id: {crawler_id} - assigned {hosting_service} api_key: {obscurify_secret(api_key)} to machine_id: {machine_id}")
                 break
             # Potentially, all keys are active - we don't allow machines to share keys, so we resolve to None.
             # This also means we have to manually deactivate keys if we want to change machine-ids in crawlers.
@@ -130,5 +130,5 @@ def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
 
     key_to_log = obscurify_secret(api_key) if api_key else None
     logger.debug(
-        f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {key_to_log} for machine: {machine_id}")
+        f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {key_to_log} for machine_id: {machine_id}")
     return api_key
