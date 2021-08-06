@@ -38,7 +38,7 @@ def prune_exports(keep, hosting_service=None):
             ExportMeta.query.filter_by(
                 hosting_service_id=hosting_service.id, is_raw=True
             )
-            .filter(ExportMeta.file_path is not None)
+            .filter(ExportMeta.file_path != None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
@@ -46,7 +46,7 @@ def prune_exports(keep, hosting_service=None):
             ExportMeta.query.filter_by(
                 hosting_service_id=hosting_service.id, is_raw=False
             )
-            .filter(ExportMeta.file_path is not None)
+            .filter(ExportMeta.file_path != None)
             .order_by(ExportMeta.created_at.desc())
             .offset(keep)
         )
