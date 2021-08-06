@@ -11,6 +11,7 @@ from hubgrep_indexer.lib.block_helpers import get_block_for_crawler
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer.models.hosting_service import HostingService
 from tests.helpers import route_put_repos, get_mock_repos, HOSTER_TYPES
+from hubgrep_indexer import state_manager
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class TestHostStateHelpers:
         indirect=True
     )
     def test_state_helpers_has_reached_end_using_db_and_and_routes(
-            self, test_client, test_state_manager, hosting_service: HostingService
+            self, test_client, hosting_service: HostingService
     ):
         with test_client:
             print(f"testing for: {hosting_service.api_url} {hosting_service.id}")
@@ -68,14 +69,14 @@ class TestHostStateHelpers:
             _append_repos(hosting_service=hosting_service, repo_dicts=repos)
             new_block = get_block_for_crawler(hosting_service_id=hosting_service.id)
             assert new_block
-            new_block = test_state_manager.get_block(hoster_prefix=hosting_service.id, block_uid=new_block["uid"])
+            new_block = state_manager.get_block(hoster_prefix=hosting_service.id, block_uid=new_block["uid"])
             assert new_block
 
             state_helper = get_state_helper(hosting_service_type=hosting_service.type)
 
             has_reached_end = state_helper.has_reached_end(
                 hosting_service_id=hosting_service.id,
-                state_manager=test_state_manager,
+                state_manager=state_manager,
                 block=new_block,
                 parsed_repos=repos,
             )

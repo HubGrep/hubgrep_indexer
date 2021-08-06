@@ -61,7 +61,8 @@ def create_app():
     def time_crawler_request(response):
         if g.is_crawler_request:
             request_total_ts = time.time() - g.hubgrep_request_start_ts
-            logger.info(f" after crawler request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
+            logger.info(
+                f" after crawler request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
         return response
 
     @login_manager.request_loader

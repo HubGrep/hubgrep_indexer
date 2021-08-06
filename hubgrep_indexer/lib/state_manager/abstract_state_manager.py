@@ -168,4 +168,26 @@ class AbstractStateManager:
                 return block
         return None
 
+    def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
+        """ Attach an api_key to a machine_id. """
+        raise NotImplementedError
 
+    def get_machine_api_key(self, hosting_service_id: str, machine_id: str) -> str:
+        """ Get an active api_key attached to a machine_id. """
+        raise NotImplementedError
+
+    def get_machine_id_by_api_key(self, hosting_service_id: str, api_key: str):
+        """ Reverse lookup; get the machine_id attached to a api_key. """
+        raise NotImplementedError
+
+    def remove_machine_api_key(self, hosting_service_id: str, api_key: str) -> Union[str, None]:
+        """
+        Unlock an api_key from being attached to x machine_id.
+
+        Return machine_id for a released api_key, or None if it wasn't attached.
+        """
+        raise NotImplementedError
+
+    def is_api_key_active(self, hosting_service_id: str, api_key: str) -> bool:
+        """ Query if an api_key is currently attached to a machine_id. """
+        raise NotImplementedError

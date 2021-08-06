@@ -48,7 +48,6 @@ class TestGetBlock:
             response = test_app.test_client().get(
                 f"/api/v1/hosters/{hosting_service.type}/loadbalanced_block"
             )
-            print("JSON``", response.json)
             assert response.json["from_id"] == 1
             assert response.json["to_id"] == test_state_manager.batch_size
             response = test_app.test_client().get(f"/api/v1/hosters/{hosting_service.id}/block")

@@ -1,5 +1,6 @@
 import time
 import logging
+from typing import Union
 
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from hubgrep_indexer.lib.block import Block
@@ -38,8 +39,14 @@ class RedisStateManager(AbstractStateManager):
             self.redis = redislite.Redis()
 
     @classmethod
-    def _get_redis_key(cls, key_prefix: str, key: str):
+    def _get_redis_key(cls, key_prefix: str, key: str) -> str:
         return f"{key_prefix}:{key}"
+
+    def _get_machine_id_key(self, hosting_service_id: str, machine_id: str) -> str:
+        return self._get_redis_key(f"{hosting_service_id}:{machine_id}", self.machine_api_key_key)
+
+    def _get_api_key_key(self, hosting_service_id: str, api_key: str) -> str:
+        return self._get_redis_key(f"{hosting_service_id}:{api_key}", self.active_api_keys_key)
 
     def get_lock(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.lock_key)
@@ -141,27 +148,47 @@ class RedisStateManager(AbstractStateManager):
             blocks[block.uid] = block
         return blocks
 
-    def get_machine_api_key(self, machine_id: str) -> str:
-        machine_key = self._get_redis_key(machine_id, self.machine_api_key_key)
+    def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
+        """ Attach an api_key to a machine_id. """
+        machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
+        self.redis.set(machine_key, api_key)
+
+        # register all api_keys which are in use (by storing the machine_id attached to it)
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        self.redis.set(api_key_key, machine_id)
+
+    def get_machine_api_key(self, hosting_service_id: str, machine_id: str) -> str:
+        """ Get an active api_key attached to a machine_id. """
+        machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
         api_key = self.redis.get(machine_key)
         if api_key:
             api_key = api_key.decode("utf-8")
         return api_key
 
-    def set_machine_api_key(self, machine_id: str, api_key: str):
-        # store the api_key behind a machine_id key
-        machine_key = self._get_redis_key(machine_id, self.machine_api_key_key)
-        self.redis.set(machine_key, api_key)
+    def get_machine_id_by_api_key(self, hosting_service_id: str, api_key: str):
+        """ Reverse lookup; get the machine_id redis-key attached to a api_key. """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        machine_id = self.redis.get(api_key_key)
+        if machine_id:
+            machine_id = machine_id.decode("utf-8")
+        return machine_id
 
-        # register all api_keys which are in use (by storing the machine_key attached to it)
-        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
-        self.redis.set(api_key_key, machine_key)
+    def remove_machine_api_key(self, hosting_service_id: str, api_key: str) -> Union[str, None]:
+        """
+        Unlock an api_key from being attached to x machine_id.
 
-    def remove_active_api_key(self, api_key: str):
-        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
-        machine_key = self.redis.get(api_key_key)
-        self.redis.delete(api_key_key, machine_key)
+        Return machine_id for a released api_key, or None if it wasn't attached.
+        """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        machine_id = self.redis.get(api_key_key)
+        if machine_id:
+            machine_id = machine_id.decode("utf-8")
+            machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
+            self.redis.delete(machine_key)
+        self.redis.delete(api_key_key)
+        return machine_id
 
-    def is_api_key_active(self, api_key: str) -> bool:
-        api_key_key = self._get_redis_key(api_key, self.active_api_keys_key)
+    def is_api_key_active(self, hosting_service_id: str, api_key: str) -> bool:
+        """ Query if an api_key is currently attached to a machine_id. """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
         return bool(self.redis.exists(api_key_key))

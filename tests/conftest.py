@@ -5,7 +5,7 @@ import pytest
 
 from hubgrep_indexer.lib.init_logging import init_logging
 
-from hubgrep_indexer import create_app, db, state_manager
+from hubgrep_indexer import create_app, db, state_manager, RedisStateManager
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
@@ -37,9 +37,10 @@ def test_app(request):
 
     # https://docs.pytest.org/en/stable/fixture.html#fixture-scopes
     def teardown():
-        # tear down db after test
+        # tear down db/redis after test
         os.close(db_fd)
         os.unlink(file_path)
+        state_manager.redis.flushdb()
 
     request.addfinalizer(teardown)
 
@@ -52,11 +53,12 @@ def test_client(test_app):
     ctx.pop()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def test_state_manager():
-    # set up a fake redis, so we dont need a redis container for the tests
-    state_manager.redis = redislite.Redis()
-    yield state_manager
+    manager = RedisStateManager()
+    manager.redis = redislite.Redis()
+    yield manager
+    manager.redis.flushdb()
 
 
 def _add_hosting_service(api_url: str,
