@@ -100,6 +100,15 @@ def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict,
 
 
 def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
+    """
+    Find an available api_key (one not already in use by another machine_id) and lock it from being
+    distributed to other machine_ids. To unlock a api_key use our command "flask cli release_api_key".
+
+    Machine-id is controlled via request header: "Hubgrep-Crawler-Machine-ID".
+
+    We want to avoid any automatic/accidental sharing of api_keys between multiple
+    crawler machines in order to avoid being flagged as abusive via ip addresses.
+    """
     crawler_id = request.headers.get(CRAWLER_HEADER_CORRELATION_ID, CRAWLER_CORRELATION_ID_DEFAULT)
     machine_id = request.headers.get(CRAWLER_HEADER_MACHINE_ID, CRAWLER_MACHINE_ID_DEFAULT)
 

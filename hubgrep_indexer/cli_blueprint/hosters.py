@@ -42,11 +42,21 @@ def import_hosters(json_path):
                 logger.exception(e)
 
 
-@cli_bp.cli.command(help="unlock an api_key from being attached to a machine_id")
-@click.argument("hosting_service_id")
+@cli_bp.cli.command(help="release an api_key from being attached to a machine_id")
 @click.argument("api_key")
-def unlock_api_key(hosting_service_id, api_key):
-    state_manager.remove_machine_api_key(hosting_service_id=hosting_service_id, api_key=api_key)
+def release_api_key(api_key):
+    lines = []
+    for hosting_service in HostingService.query.all():
+        if isinstance(hosting_service.api_keys, list) and api_key in hosting_service.api_keys:
+            machine_id = state_manager.remove_machine_api_key(hosting_service_id=hosting_service.id, api_key=api_key)
+            if machine_id is not None:
+                # since we search, if for whatever reason there are duplicate api_keys, multiple will be released
+                # it would then be good to know that this happened
+                lines.append(f"- released api_key from machine_id: {machine_id} for {hosting_service}")
+    if len(lines) > 0:
+        print("\n".join(lines))
+    else:
+        print("- no active api-key to release was found! -")
 
 
 @cli_bp.cli.command(help="print all currently active api_keys (attached to a machine_id)")
@@ -59,8 +69,8 @@ def active_api_keys():
                     machine_id = state_manager.get_machine_id_by_api_key(hosting_service_id=hosting_service.id,
                                                                          api_key=api_key)
                     lines.append(
-                        f"machine_id: {machine_id} locks api_key: {api_key} for hosting_service_id: {hosting_service.id}")
+                        f"- machine_id: {machine_id} holds api_key: {api_key} for {hosting_service}")
     if len(lines) > 0:
-        print("\n".join(lines))
+        print("\n- ".join(lines))
     else:
-        print("- no currently active api_keys -")
+        print("- no currently active api_keys! -")
