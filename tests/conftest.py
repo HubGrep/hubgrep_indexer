@@ -58,6 +58,8 @@ def test_client(test_app):
 
 @pytest.fixture()
 def test_state_manager():
+    # TODO refactor all tests using this and get rid of this fixture - initialize state_manager with redislite at the
+    # TODO top of this file (outside test fixtures/functions) and flush after each test
     state_manager.redis = redislite.Redis()
     yield state_manager
     state_manager.redis.flushdb()
