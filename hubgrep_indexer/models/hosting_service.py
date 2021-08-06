@@ -28,7 +28,7 @@ class HostingService(db.Model):
     landingpage_url = db.Column(db.String(500))
 
     api_url = db.Column(db.String(500), unique=True, nullable=False)
-    api_keys = db.Column(ARRAY(db.String(500)), nullable=True)
+    api_keys = db.Column(ARRAY(db.String(500)), nullable=False, server_default="{}")
 
     def __str__(self) -> str:
         return f"<HostingService {self.type}-{self.id}@{self.hoster_name}>"

@@ -113,7 +113,7 @@ def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
     machine_id = request.headers.get(CRAWLER_HEADER_MACHINE_ID, CRAWLER_MACHINE_ID_DEFAULT)
 
     api_key = state_manager.get_machine_api_key(hosting_service_id=hosting_service.id, machine_id=machine_id) or None
-    if not api_key and isinstance(hosting_service.api_keys, list):
+    if not api_key:
         for _api_key in hosting_service.api_keys:
             if not state_manager.is_api_key_active(hosting_service_id=hosting_service.id, api_key=_api_key):
                 state_manager.set_machine_api_key(hosting_service_id=hosting_service.id,
