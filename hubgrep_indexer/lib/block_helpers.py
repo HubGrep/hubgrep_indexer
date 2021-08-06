@@ -4,13 +4,14 @@ helpers to generate block dicts for the crawlers
 
 import logging
 import time
-
-from typing import Dict
-
-from flask import url_for
+from typing import Dict, Union
+from flask import request
 from flask import current_app
 
 from hubgrep_indexer import state_manager
+from hubgrep_indexer.constants import BLOCK_STATUS_READY, CRAWLER_HEADER_MACHINE_ID, CRAWLER_HEADER_CORRELATION_ID, \
+    CRAWLER_MACHINE_ID_DEFAULT, CRAWLER_CORRELATION_ID_DEFAULT
+from hubgrep_indexer.lib.utils import obscurify_secret
 from hubgrep_indexer.models.hosting_service import HostingService
 
 logger = logging.getLogger(__name__)
@@ -31,29 +32,27 @@ def _get_block_dict(hosting_service_id) -> Dict:
         block = timed_out_block
     else:
         block = state_manager.get_next_block(hosting_service_id)
-    block_dict = block.to_dict()
 
     hosting_service = HostingService.query.get(hosting_service_id)
     logger.info(f"getting block for {hosting_service}")
 
-    block_dict["crawler"] = hosting_service.to_dict(include_secrets=True)
-    block_dict["callback_url"] = url_for(
-        "api.add_repos",
-        hosting_service_id=hosting_service.id,
-        block_uid=block_dict["uid"],
-        _external=True,
-    )
-    return block_dict
+    api_key = resolve_api_key(hosting_service=hosting_service)
+    block.hosting_service = hosting_service.to_dict(include_secrets=True, api_key=api_key)
+
+    if block.status != BLOCK_STATUS_READY:
+        logger.warning(f'expected block status "{BLOCK_STATUS_READY}" - block "{block}"')
+
+    return block.to_dict()
 
 
-def get_block_for_crawler(hosting_service_id) -> Dict:
+def get_block_for_crawler(hosting_service_id) -> Union[Dict, None]:
     state = state_manager.get_state_dict(hoster_prefix=hosting_service_id)
     if _state_is_too_old(state):
         return _get_block_dict(hosting_service_id)
     return None
 
 
-def get_loadbalanced_block_for_crawler(type) -> Dict:
+def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict, None]:
     """
     get a block from a hoster of type <type>.
 
@@ -69,7 +68,7 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     """
     # get all states
     hoster_id_state = {}
-    for hosting_service in HostingService.query.filter_by(type=type).all():
+    for hosting_service in HostingService.query.filter_by(type=hosting_service_type).all():
         hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
             hoster_prefix=hosting_service.id
         )
@@ -98,3 +97,38 @@ def get_loadbalanced_block_for_crawler(type) -> Dict:
     logger.debug(f"creating block for hoster {oldest_hoster_id}:")
     logger.debug(f"state {oldest_hoster_state}:")
     return _get_block_dict(oldest_hoster_id)
+
+
+def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
+    """
+    Find an available api_key (one not already in use by another machine_id) and lock it from being
+    distributed to other machine_ids. To unlock a api_key use our command "flask cli release_api_key".
+
+    Machine-id is controlled via request header: "Hubgrep-Crawler-Machine-ID".
+
+    We want to avoid any automatic/accidental sharing of api_keys between multiple
+    crawler machines in order to avoid being flagged as abusive via ip addresses.
+    """
+    crawler_id = request.headers.get(CRAWLER_HEADER_CORRELATION_ID, CRAWLER_CORRELATION_ID_DEFAULT)
+    machine_id = request.headers.get(CRAWLER_HEADER_MACHINE_ID, CRAWLER_MACHINE_ID_DEFAULT)
+
+    api_key = state_manager.get_machine_api_key(hosting_service_id=hosting_service.id, machine_id=machine_id) or None
+    if not api_key:
+        for _api_key in hosting_service.api_keys:
+            if not state_manager.is_api_key_active(hosting_service_id=hosting_service.id, api_key=_api_key):
+                state_manager.set_machine_api_key(hosting_service_id=hosting_service.id,
+                                                  machine_id=machine_id,
+                                                  api_key=_api_key)
+                api_key = _api_key
+                logger.info(
+                    f"crawler_id: {crawler_id} - assigned {hosting_service} api_key: {obscurify_secret(api_key)} to machine_id: {machine_id}")
+                break
+            # Potentially, all keys are active - we don't allow machines to share keys, so we resolve to None.
+            # This also means we have to manually deactivate keys if we want to change machine-ids in crawlers.
+            # This is because we want to avoid any automatic/accidental emitting of shared api_keys between
+            # our different crawler "clusters", to avoid being flagged as abusive via ip addresses.
+
+    key_to_log = obscurify_secret(api_key) if api_key else None
+    logger.debug(
+        f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {key_to_log} for machine_id: {machine_id}")
+    return api_key

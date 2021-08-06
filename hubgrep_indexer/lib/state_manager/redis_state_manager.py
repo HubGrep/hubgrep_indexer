@@ -1,7 +1,9 @@
 import time
 import logging
+from typing import Union
 
-from .abstract_state_manager import AbstractStateManager, Block
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
+from hubgrep_indexer.lib.block import Block
 
 import redis
 import redislite
@@ -18,13 +20,16 @@ class RedisStateManager(AbstractStateManager):
         super().__init__()
         self.redis = None
 
+        self.lock_key = "lock"
+
         self.run_created_ts_key = "run_created_ts"
         self.block_map_key = "blocks"
         self.highest_block_repo_id_key = "highest_block_repo_id"
         self.highest_confirmed_block_repo_id_key = "highest_confirmed_block_repo_id"
         self.empty_results_counter_key = "empty_results_counter"
         self.run_is_finished_key = "run_is_finished"
-        self.lock_key = "lock"
+        self.machine_api_key_key = "machine_api_key"
+        self.active_api_keys_key = "active_api_key"
 
     def init_app(self, app, *args, **kwargs):
         redis_url = app.config["REDIS_URL"]
@@ -34,10 +39,16 @@ class RedisStateManager(AbstractStateManager):
             self.redis = redislite.Redis()
 
     @classmethod
-    def _get_redis_key(cls, hoster_prefix: str, key: str):
-        return f"{hoster_prefix}:{key}"
+    def _get_redis_key(cls, key_prefix: str, key: str) -> str:
+        return f"{key_prefix}:{key}"
 
-    def get_lock(self, hoster_prefix):
+    def _get_machine_id_key(self, hosting_service_id: str, machine_id: str) -> str:
+        return self._get_redis_key(f"{hosting_service_id}:{machine_id}", self.machine_api_key_key)
+
+    def _get_api_key_key(self, hosting_service_id: str, api_key: str) -> str:
+        return self._get_redis_key(f"{hosting_service_id}:{api_key}", self.active_api_keys_key)
+
+    def get_lock(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.lock_key)
         lock = self.redis.lock(redis_key)
         return lock
@@ -83,30 +94,30 @@ class RedisStateManager(AbstractStateManager):
         counter_str: str = self.redis.get(redis_key)
         return int(counter_str)
 
-    def push_new_block(self, hoster_prefix, block: Block):
+    def push_new_block(self, hoster_prefix: str, block: Block):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         self.redis.hset(redis_key, block.uid, block.to_json())
 
-    def set_run_created_ts(self, hoster_prefix, timestamp: float = None):
+    def set_run_created_ts(self, hoster_prefix: str, timestamp: float = None):
         if timestamp is None:
             timestamp = time.time()
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         self.redis.set(redis_key, timestamp)
 
-    def get_run_created_ts(self, hoster_prefix):
+    def get_run_created_ts(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         if not self.redis.get(redis_key):
             self.set_run_created_ts(hoster_prefix, 0)
         return float(self.redis.get(redis_key))
 
-    def get_is_run_finished(self, hoster_prefix) -> bool:
+    def get_is_run_finished(self, hoster_prefix: str) -> bool:
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
         is_finished_str = self.redis.get(redis_key)
         if is_finished_str:
             is_finished_str = int(is_finished_str)
         return bool(is_finished_str)
 
-    def set_is_run_finished(self, hoster_prefix, is_finished: bool):
+    def set_is_run_finished(self, hoster_prefix: str, is_finished: bool):
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
         self.redis.set(redis_key, int(is_finished))
 
@@ -122,13 +133,13 @@ class RedisStateManager(AbstractStateManager):
                 f"(ignoring call) attempted to update non-existing block state, uid: {block.uid}"
             )
 
-    def _delete_block(self, hoster_prefix, block_uid):
+    def _delete_block(self, hoster_prefix: str, block_uid: str):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         block = self.redis.hget(redis_key, block_uid)
         self.redis.hdel(redis_key, block_uid)
         return block
 
-    def get_blocks(self, hoster_prefix):
+    def get_blocks(self, hoster_prefix: str):
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         block_jsons = self.redis.hgetall(redis_key)
         blocks = {}
@@ -136,3 +147,48 @@ class RedisStateManager(AbstractStateManager):
             block = Block.from_json(block_json)
             blocks[block.uid] = block
         return blocks
+
+    def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
+        """ Attach an api_key to a machine_id. """
+        machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
+        self.redis.set(machine_key, api_key)
+
+        # register all api_keys which are in use (by storing the machine_id attached to it)
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        self.redis.set(api_key_key, machine_id)
+
+    def get_machine_api_key(self, hosting_service_id: str, machine_id: str) -> str:
+        """ Get an active api_key attached to a machine_id. """
+        machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
+        api_key = self.redis.get(machine_key)
+        if api_key:
+            api_key = api_key.decode("utf-8")
+        return api_key
+
+    def get_machine_id_by_api_key(self, hosting_service_id: str, api_key: str):
+        """ Reverse lookup; get the machine_id redis-key attached to a api_key. """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        machine_id = self.redis.get(api_key_key)
+        if machine_id:
+            machine_id = machine_id.decode("utf-8")
+        return machine_id
+
+    def remove_machine_api_key(self, hosting_service_id: str, api_key: str) -> Union[str, None]:
+        """
+        Unlock an api_key from being attached to x machine_id.
+
+        Return machine_id for a released api_key, or None if it wasn't attached.
+        """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        machine_id = self.redis.get(api_key_key)
+        if machine_id:
+            machine_id = machine_id.decode("utf-8")
+            machine_key = self._get_machine_id_key(hosting_service_id=hosting_service_id, machine_id=machine_id)
+            self.redis.delete(machine_key)
+        self.redis.delete(api_key_key)
+        return machine_id
+
+    def is_api_key_active(self, hosting_service_id: str, api_key: str) -> bool:
+        """ Query if an api_key is currently attached to a machine_id. """
+        api_key_key = self._get_api_key_key(hosting_service_id=hosting_service_id, api_key=api_key)
+        return bool(self.redis.exists(api_key_key))

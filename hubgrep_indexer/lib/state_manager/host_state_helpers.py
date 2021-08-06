@@ -1,14 +1,12 @@
 import logging
 from typing import Union
 
+from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
+from hubgrep_indexer.lib.block import Block
 from hubgrep_indexer.constants import (
     HOST_TYPE_GITHUB,
     HOST_TYPE_GITEA,
     HOST_TYPE_GITLAB,
-)
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import (
-    AbstractStateManager,
-    Block,
 )
 
 logger = logging.getLogger(__name__)

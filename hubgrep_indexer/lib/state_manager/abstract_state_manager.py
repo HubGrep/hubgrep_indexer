@@ -1,80 +1,10 @@
-import json
 import time
-import uuid
 import logging
-
 from typing import Dict, Union
 
+from hubgrep_indexer.lib.block import Block
+
 logger = logging.getLogger(__name__)
-
-
-class Block:
-    """
-    A "block" is a range of repository ID's to be crawled as a batch job.
-    """
-
-    def __init__(self):
-        self.uid = uuid.uuid4().hex
-        self.run_created_ts = None
-        self.from_id = None
-        self.to_id = None
-        # todo: add specific "ids" when we already know they exist (github)
-        self.ids = None
-        self.attempts_at = []
-        self.status = ""
-
-    @classmethod
-    def new(cls, from_id, to_id, run_created_ts=None, ids=None):
-        block = Block()
-        block.from_id = from_id
-        block.to_id = to_id
-        block.ids = ids
-        block.attempts_at.append(time.time())
-        block.run_created_ts = run_created_ts
-        return block
-
-    @classmethod
-    def from_dict(cls, d: dict):
-        block = Block()
-        block.uid = d["uid"]
-        block.from_id = d["from_id"]
-        block.to_id = d["to_id"]
-        block.ids = d.get("ids", None)
-        block.attempts_at = d["attempts_at"]
-        block.status = d["status"]
-        block.run_created_ts = d["run_created_ts"]
-        return block
-
-    @classmethod
-    def from_json(cls, j: str):
-        d = json.loads(j)
-        return cls.from_dict(d)
-
-    def to_dict(self):
-        return dict(
-            uid=self.uid,
-            from_id=self.from_id,
-            to_id=self.to_id,
-            ids=self.ids,
-            attempts_at=self.attempts_at,
-            status=self.status,
-            run_created_ts=self.run_created_ts,
-        )
-
-    def to_json(self):
-        d = self.to_dict()
-        return json.dumps(d)
-
-    @classmethod
-    def get_sleep_dict(cls):
-        return {
-            "status": "sleep",
-            "retry_at": time.time() + 300,  # 5min from now
-        }
-
-    def __repr__(self):
-        # TODO new repr as we have either from/to_id and/or ids
-        return f"<Block {self.uid}: {self.from_id}-{self.to_id}>"
 
 
 class AbstractStateManager:
@@ -238,4 +168,26 @@ class AbstractStateManager:
                 return block
         return None
 
+    def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
+        """ Attach an api_key to a machine_id. """
+        raise NotImplementedError
 
+    def get_machine_api_key(self, hosting_service_id: str, machine_id: str) -> str:
+        """ Get an active api_key attached to a machine_id. """
+        raise NotImplementedError
+
+    def get_machine_id_by_api_key(self, hosting_service_id: str, api_key: str):
+        """ Reverse lookup; get the machine_id attached to a api_key. """
+        raise NotImplementedError
+
+    def remove_machine_api_key(self, hosting_service_id: str, api_key: str) -> Union[str, None]:
+        """
+        Unlock an api_key from being attached to x machine_id.
+
+        Return machine_id for a released api_key, or None if it wasn't attached.
+        """
+        raise NotImplementedError
+
+    def is_api_key_active(self, hosting_service_id: str, api_key: str) -> bool:
+        """ Query if an api_key is currently attached to a machine_id. """
+        raise NotImplementedError

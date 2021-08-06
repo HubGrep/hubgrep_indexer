@@ -27,7 +27,7 @@ def hosters():
         hosting_services = []
         for hosting_service in HostingService.query.all():
             hosting_services.append(
-                hosting_service.to_dict(include_secrets=current_user.is_authenticated)
+                hosting_service.to_dict(include_secrets=current_user.is_authenticated, include_exports=True)
             )
         return jsonify(hosting_services)
 

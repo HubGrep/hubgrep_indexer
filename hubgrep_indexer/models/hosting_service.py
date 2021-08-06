@@ -1,3 +1,4 @@
+import logging
 import time
 import re
 from urllib.parse import urljoin
@@ -5,11 +6,11 @@ from urllib.parse import urlparse
 import logging
 
 from typing import List, Dict
-
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import ResultProxy
 from sqlalchemy import func
-
 from flask import current_app
 
 from hubgrep_indexer import db
@@ -27,10 +28,10 @@ class HostingService(db.Model):
     landingpage_url = db.Column(db.String(500))
 
     api_url = db.Column(db.String(500), unique=True, nullable=False)
-    api_keys = db.Column(ARRAY(db.String(500)), nullable=True)
+    api_keys = db.Column(ARRAY(db.String(500)), nullable=False, server_default="{}")
 
-    def __str__(self):
-        return f"<{self.type}-{self.id}@{self.hoster_name}>"
+    def __str__(self) -> str:
+        return f"<HostingService {self.type}-{self.id}@{self.hoster_name}>"
 
     @property
     def hoster_name(self):
@@ -38,8 +39,7 @@ class HostingService(db.Model):
 
     def get_exports_dict(self, unified=False) -> List[Dict]:
         """
-        shorthand for the query to this hosters exports, sorted by datetime
-        (newest first)
+        Shorthand for the query to this hosters exports, sorted by datetime (newest first).
         """
         query = ExportMeta.query.filter_by(
             hosting_service_id=self.id, is_raw=(not unified)
@@ -59,9 +59,12 @@ class HostingService(db.Model):
             )
         return exports
 
+      
     def get_crawler_request_headers(self):
         """
-        get crawler request headers for this service
+        Get crawler request headers for this service.
+
+        These are in addition to authorization, which is handled with api_key in the crawler itself.
         """
         headers = dict()
         # TODO append hoster specific headers when required/found
@@ -72,17 +75,18 @@ class HostingService(db.Model):
         elif self.type == "gitlab":
             pass
         else:
-            logger.error(f"unknown hoster {self.type}!")
+            logger.error(f"unknown HostingService.type: {self.type}!")
         return headers
 
     def get_service_label(self):
         return re.split("//", self.landingpage_url)[1].rstrip("/")
 
-    def to_dict(self, include_secrets=False):
+    def to_dict(self, include_secrets: bool = False, include_exports: bool = False, api_key: str = None):
         """
-        return the dict for this hoster.
+        Dict representation for this HostingService.
 
-        includes the result url, and things we might want to have in an api later.
+        If "include_secrets" is True, api_keys and any additional crawler headers are included.
+        If "include_secrets" is True and "api_key" is provided, it will replace "api_keys" property with "api_key".
         """
         d = dict(
             id=self.id,
@@ -90,17 +94,15 @@ class HostingService(db.Model):
             landingpage_url=self.landingpage_url,
             api_url=self.api_url,
             hoster_name=self.hoster_name,
-            exports_raw=self.get_exports_dict(unified=False),
-            exports_unified=self.get_exports_dict(unified=True),
         )
-        if include_secrets:
-            # TODO cycle between keys! but not here directly, we need to keep track via redis_state_manager
-            api_key = None
-            if self.api_keys and len(self.api_keys) > 0:
-                api_key = self.api_keys[0]
-
+        if api_key:
             d["api_key"] = api_key
+        if include_secrets:
+            d["api_keys"] = self.api_keys
             d["crawler_request_headers"] = self.get_crawler_request_headers()
+        if include_exports:
+            d["exports_raw"] = self.get_exports_dict(unified=False)
+            d["exports_unified"] = self.get_exports_dict(unified=True)
         return d
 
     def export_repos(self):
@@ -133,7 +135,7 @@ class HostingService(db.Model):
     @property
     def repos(self) -> ResultProxy:
         """
-        get all repositories for this hoster.
+        Get all repositories for this hoster.
 
         call like hoster.repos.all() (or whatever you want to do with it)
         """
