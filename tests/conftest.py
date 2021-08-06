@@ -23,6 +23,9 @@ def test_app(request):
 
     db_fd, file_path = tempfile.mkstemp()
 
+    # always overwrite redis with redislite so that whatever a test triggers, redis will be replaced with a test version
+    state_manager.redis = redislite.Redis()
+
     with app.app_context():
         db.create_all()
         # wipe all tables, in case anything was left over
@@ -40,7 +43,7 @@ def test_app(request):
         # tear down db/redis after test
         os.close(db_fd)
         os.unlink(file_path)
-        state_manager.redis.flushdb()
+        state_manager.redis.flushdb()  # always flush our test redis after a test
 
     request.addfinalizer(teardown)
 
@@ -55,10 +58,9 @@ def test_client(test_app):
 
 @pytest.fixture()
 def test_state_manager():
-    manager = RedisStateManager()
-    manager.redis = redislite.Redis()
-    yield manager
-    manager.redis.flushdb()
+    state_manager.redis = redislite.Redis()
+    yield state_manager
+    state_manager.redis.flushdb()
 
 
 def _add_hosting_service(api_url: str,
