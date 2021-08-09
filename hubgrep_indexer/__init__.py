@@ -48,22 +48,22 @@ def create_app():
     login_manager.init_app(app)
     user_crawlers = User(api_key=app.config["INDEXER_API_KEY"])
 
-    @app.before_request
-    def log_crawler_ids():
-        machine_id = request.headers.get('Hubgrep-Crawler-Machine-ID', False)
-        g.is_crawler_request = bool(machine_id)
-        if g.is_crawler_request:
-            g.hubgrep_request_start_ts = time.time()
-            logger.info(
-                f"before crawler request - request-id: {request.headers.get('X-Request-ID')} - crawler-id: {request.headers.get('X-Correlation-ID')} - machine-id: {machine_id}")
+    #@app.before_request
+    #def log_crawler_ids():
+        #machine_id = request.headers.get('Hubgrep-Crawler-Machine-ID', False)
+        #g.is_crawler_request = bool(machine_id)
+        #if g.is_crawler_request:
+            #g.hubgrep_request_start_ts = time.time()
+            #logger.debug(
+                #f"before crawler request - request-id: {request.headers.get('X-Request-ID')} - crawler-id: {request.headers.get('X-Correlation-ID')} - machine-id: {machine_id}")
 
-    @app.after_request
-    def time_crawler_request(response):
-        if g.is_crawler_request:
-            request_total_ts = time.time() - g.hubgrep_request_start_ts
-            logger.info(
-                f" after crawler request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
-        return response
+    #@app.after_request
+    #def time_crawler_request(response):
+        #if g.is_crawler_request:
+            #request_total_ts = time.time() - g.hubgrep_request_start_ts
+            #logger.debug(
+                #f" after crawler request - request-id: {request.headers.get('X-Request-ID', 'no-id')} - took {request_total_ts}s")
+        #return response
 
     @login_manager.request_loader
     def load_user_from_request(request):
@@ -109,7 +109,8 @@ def is_user_authenticated(request, user):
     if api_key:
         api_key = api_key.replace("Basic ", "", 1)
         try:
-            api_key = base64.b64decode(api_key)
+            api_key_b64_bytes = api_key.encode()
+            api_key = base64.b64decode(api_key_b64_bytes).decode()
         except (TypeError, binascii.Error):
             # binascii.Error happens when we try to decode invalid base64 strings
             pass
