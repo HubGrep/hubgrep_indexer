@@ -8,6 +8,7 @@ from hubgrep_indexer.constants import (
     HOST_TYPE_GITEA,
     HOST_TYPE_GITLAB,
 )
+from hubgrep_indexer.models.hosting_service import HostingService
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +20,11 @@ class IStateHelper:
 
     @classmethod
     def resolve_state(
-        cls,
-        hosting_service_id: str,
-        state_manager: AbstractStateManager,
-        block_uid: str,
-        parsed_repos: list,
+            cls,
+            hosting_service: HostingService,
+            state_manager: AbstractStateManager,
+            block_uid: str,
+            parsed_repos: list,
     ) -> Union[bool, None]:
         """
         Default implementation for resolving if we have consumed all
@@ -36,56 +37,45 @@ class IStateHelper:
         Returns state_manager.get_run_is_finished() OR None
         - true/false if we reached end, None if block is unrelated to the current run
         """
-        block = state_manager.get_block(
-            hoster_prefix=hosting_service_id, block_uid=block_uid
-        )
+        run_created_ts = state_manager.get_run_created_ts(hoster_prefix=hosting_service.id)
+        block = state_manager.get_block(hoster_prefix=hosting_service.id, block_uid=block_uid)
 
         if not block:
             # Block has already been deleted from the previous run, no state changes
-            logger.info(f"block no longer exists - no state changes, uid: {block_uid}")
+            logger.warning(f"{hosting_service} - block no longer exists - no state changes, uid: {block_uid}")
             return None
-        else:
-            is_run_finished = state_manager.get_is_run_finished(
-                hoster_prefix=hosting_service_id
-            )
-            if is_run_finished:
-                logger.info(
-                    f"skipping state update for outdated block, uid: {block_uid}"
-                )
-                # this Block belongs to an old run, so we avoid touching any state for it
-                return None
+        if block.run_created_ts != run_created_ts:
+            logger.warning(f"{hosting_service} - skipping state update for outdated block: {block}")
+            return None
 
         state_manager.finish_block(
-            hoster_prefix=hosting_service_id, block_uid=block_uid
+            hoster_prefix=hosting_service.id, block_uid=block_uid
         )
         if len(parsed_repos) == 0:
-            state_manager.increment_empty_results_counter(
-                hoster_prefix=hosting_service_id, amount=1
-            )
+            state_manager.increment_empty_results_counter(hoster_prefix=hosting_service.id, amount=1)
         else:
-            state_manager.set_empty_results_counter(
-                hoster_prefix=hosting_service_id, count=0
-            )
+            state_manager.set_empty_results_counter(hoster_prefix=hosting_service.id, count=0)
 
         # check on the effects of the block transaction
         has_reached_end = cls.has_reached_end(
-            hosting_service_id=hosting_service_id,
+            hosting_service=hosting_service,
             state_manager=state_manager,
             parsed_repos=parsed_repos,
             block=block,
         )
-        has_too_many_empty = cls.has_too_many_consecutive_empty_results(
-            hosting_service_id=hosting_service_id, state_manager=state_manager
+        has_too_many_empty_results = cls.has_too_many_consecutive_empty_results(
+            hosting_service=hosting_service,
+            state_manager=state_manager
         )
 
         if has_reached_end:
-            logger.info(f"crawler reached end for hoster: {hosting_service_id}")
-            state_manager.finish_run(hoster_prefix=hosting_service_id)
-        elif has_too_many_empty:
-            logger.info(
-                f"crawler reach max empty results for hoster: {hosting_service_id}"
-            )
-            state_manager.finish_run(hoster_prefix=hosting_service_id)
+            logger.info(f"crawler reached end for {hosting_service}")
+            state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
+            #state_manager.finish_run(hoster_prefix=hosting_service_id)
+        elif has_too_many_empty_results:
+            logger.info(f"crawler reach max empty results for {hosting_service}")
+            state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
+            #state_manager.finish_run(hoster_prefix=hosting_service_id)
         else:
             # we are somewhere in the middle of a hosters repos
             # and we count up our confirmed ids and continue
@@ -93,30 +83,54 @@ class IStateHelper:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
-            state_manager.set_highest_confirmed_block_repo_id(
-                hoster_prefix=hosting_service_id, repo_id=repo_id
-            )
+            state_manager.set_highest_confirmed_block_repo_id(hoster_prefix=hosting_service.id, repo_id=repo_id)
 
-        # finally return and terminate the while loop
-        return state_manager.get_is_run_finished(hosting_service_id)
+        has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
+        if has_run_hit_end:
+            # the run is finished (as in, we hit the end), but we may have blocks open
+            # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
+            if cls.has_active_blocks(
+                    hosting_service=hosting_service,
+                    state_manager=state_manager,
+                    run_created_ts=run_created_ts
+            ):
+                return None
+            else:
+                logger.info(f"{hosting_service} - run completed - last processed block: {block}")
+                state_manager.finish_run(hoster_prefix=hosting_service.id)
+
+        return has_run_hit_end
+
+    @classmethod
+    def has_active_blocks(
+            cls,
+            hosting_service: HostingService,
+            state_manager: AbstractStateManager,
+            run_created_ts: float,
+    ) -> bool:
+        for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
+            if block.run_created_ts == run_created_ts and not block.is_dead():
+                # there are still active blocks open in this run, so we don't finish
+                return True
+        return False
 
     @classmethod
     def has_too_many_consecutive_empty_results(
-        cls, hosting_service_id: str, state_manager: AbstractStateManager
+            cls, hosting_service: HostingService, state_manager: AbstractStateManager
     ) -> bool:
         has_too_many_empty_results = (
-            state_manager.get_empty_results_counter(hoster_prefix=hosting_service_id)
-            >= cls.empty_results_max
+                state_manager.get_empty_results_counter(hoster_prefix=hosting_service.id)
+                >= cls.empty_results_max
         )
         return has_too_many_empty_results
 
     @classmethod
     def has_reached_end(
-        cls,
-        hosting_service_id: str,
-        state_manager: AbstractStateManager,
-        block: Block,
-        parsed_repos: list,
+            cls,
+            hosting_service: HostingService,
+            state_manager: AbstractStateManager,
+            block: Block,
+            parsed_repos: list,
     ) -> bool:
         """
         Try to find out if we reached the end of repos on this hoster.
@@ -135,7 +149,7 @@ class IStateHelper:
 
         # get the ending repo id from a block we have seen containing results
         highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
-            hoster_prefix=hosting_service_id
+            hoster_prefix=HostingService.id
         )
 
         # get ending repo id of the block after the last confirmed one
@@ -148,11 +162,11 @@ class IStateHelper:
 class GitHubStateHelper(IStateHelper):
     @classmethod
     def has_reached_end(
-        cls,
-        hosting_service_id: str,
-        state_manager: AbstractStateManager,
-        block: Block,
-        parsed_repos: list,
+            cls,
+            hosting_service: HostingService,
+            state_manager: AbstractStateManager,
+            block: Block,
+            parsed_repos: list,
     ) -> bool:
         """
         We default to False for GitHub as we receive lots of gaps within results.

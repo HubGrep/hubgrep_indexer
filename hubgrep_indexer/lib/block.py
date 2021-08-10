@@ -3,7 +3,7 @@ import time
 import json
 import uuid
 from typing import List
-from flask import url_for
+from flask import url_for, current_app
 
 from hubgrep_indexer.constants import BLOCK_STATUS_CREATED, BLOCK_STATUS_READY, BLOCK_STATUS_SLEEP
 
@@ -23,11 +23,13 @@ class Block:
     status: str
     callback_url: str = None
     _hosting_service_dict: dict = None
+    _max_retries: int
 
     def __init__(self):
         self.uid = uuid.uuid4().hex
         self.attempts_at = []
         self.status = BLOCK_STATUS_CREATED
+        self._max_retries = current_app.config["BLOCK_MAX_RETRIES"]
 
     @classmethod
     def new(cls, from_id: int, to_id: int, run_created_ts: float = None, ids: List[int] = None):
@@ -48,6 +50,10 @@ class Block:
         self._hosting_service_dict = hosting_service_dict
         self.callback_url = self._get_callback_url(hosting_service_dict=hosting_service_dict)
         self.status = BLOCK_STATUS_READY
+
+    def is_dead(self):
+        """ Is this block considered uncrawlable or not. """
+        return len(self.attempts_at) >= self._max_retries
 
     def _get_callback_url(self, hosting_service_dict: dict) -> str:
         return url_for(
@@ -105,4 +111,4 @@ class Block:
         range_suffix = f"{self.from_id}-{self.to_id}"
         if isinstance(self.ids, list) and len(self.ids) > 0:
             range_suffix = f"cached-ids:{self.ids[0]}-{self.ids[-1]}"
-        return f"<Block_{self.uid}-{self.status}:{range_suffix}>"
+        return f"<Block_{self.uid}:{self.status}:{range_suffix}>"

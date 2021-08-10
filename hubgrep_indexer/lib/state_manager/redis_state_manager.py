@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Union
+from typing import Union, List, Dict
 
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from hubgrep_indexer.lib.block import Block
@@ -110,16 +110,16 @@ class RedisStateManager(AbstractStateManager):
             self.set_run_created_ts(hoster_prefix, 0)
         return float(self.redis.get(redis_key))
 
-    def get_is_run_finished(self, hoster_prefix: str) -> bool:
+    def get_has_run_hit_end(self, hoster_prefix: str) -> bool:
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
         is_finished_str = self.redis.get(redis_key)
         if is_finished_str:
             is_finished_str = int(is_finished_str)
         return bool(is_finished_str)
 
-    def set_is_run_finished(self, hoster_prefix: str, is_finished: bool):
+    def set_has_run_hit_end(self, hoster_prefix: str, has_hit_end: bool):
         redis_key = self._get_redis_key(hoster_prefix, self.run_is_finished_key)
-        self.redis.set(redis_key, int(is_finished))
+        self.redis.set(redis_key, int(has_hit_end))
 
     def update_block(self, hoster_prefix: str, block: Block):
         """Store changes applied to a block."""
@@ -139,13 +139,23 @@ class RedisStateManager(AbstractStateManager):
         self.redis.hdel(redis_key, block_uid)
         return block
 
-    def get_blocks(self, hoster_prefix: str):
+    def get_blocks_dict(self, hoster_prefix: str) -> Dict[str, Block]:
+        """Get all blocks as a dict accessed by their id."""
         redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
         block_jsons = self.redis.hgetall(redis_key)
         blocks = {}
         for block_json in block_jsons.values():
             block = Block.from_json(block_json)
             blocks[block.uid] = block
+        return blocks
+
+    def get_blocks_list(self, hoster_prefix: str) -> List[Block]:
+        """Get all blocks in a list."""
+        redis_key = self._get_redis_key(hoster_prefix, self.block_map_key)
+        block_jsons = self.redis.hgetall(redis_key)
+        blocks = []
+        for block_json in block_jsons.values():
+            blocks.append(Block.from_json(block_json))
         return blocks
 
     def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):

@@ -5,7 +5,7 @@ import pytest
 
 from hubgrep_indexer.lib.init_logging import init_logging
 
-from hubgrep_indexer import create_app, db, state_manager, RedisStateManager
+from hubgrep_indexer import create_app, db, state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository

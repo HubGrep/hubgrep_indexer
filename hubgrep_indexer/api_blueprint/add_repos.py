@@ -66,8 +66,8 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
 
     # will block, if the lock is already aquired, and go on after release
     with state_manager.get_lock(hosting_service_id):
-        run_is_finished = state_helper.resolve_state(
-            hosting_service_id=hosting_service_id,
+        is_run_finished = state_helper.resolve_state(
+            hosting_service=hosting_service,
             state_manager=state_manager,
             block_uid=block_uid,
             parsed_repos=parsed_repos,
@@ -77,7 +77,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
         f"updated state for {hosting_service} and block uid: {block_uid} - took {ts_state_end - ts_db_end}s"
     )
 
-    if run_is_finished:
+    if is_run_finished:
         logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
         repo_class.rotate(hosting_service)
         ts_rotate_end = time.time()

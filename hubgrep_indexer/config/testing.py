@@ -17,3 +17,5 @@ class TestingConfig(Config):
 
     INDEXER_API_KEY = "indexerapikey"
     LOGIN_DISABLED = True
+
+    BLOCK_MAX_RETRIES = 3
