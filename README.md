@@ -14,11 +14,11 @@ You can find the **supported services, documentation for deployments and develop
 
 <p align="center">
     <a href="https://www.bmbf.de/en/" rel="nofollow">
-        <img src="/HubGrep/hubgrep_search/raw/main/hubgrep/static/images/logos/bmbf_en.jpg" alt="Logo of the German Ministry for Education and Research" style="max-width:100%;" height="150px">
+        <img src="/logos/bmbf_en.jpg" alt="Logo of the German Ministry for Education and Research" style="max-width:100%;" height="150px">
     </a>
     &nbsp; &nbsp; &nbsp; &nbsp;
     <a href="https://prototypefund.de/en/" rel="nofollow">
-        <img src="/HubGrep/hubgrep_search/raw/main/hubgrep/static/images/logos/prototype_fund.svg" alt="Logo of the Prototype Fund" style="max-width:100%;" height="150px">
+        <img src="/logos/prototype_fund.svg" alt="Logo of the Prototype Fund" style="max-width:100%;" height="150px">
     </a>
 </p>
 
