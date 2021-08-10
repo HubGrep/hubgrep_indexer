@@ -15,4 +15,5 @@ class DotEnvConfig(Config):
     OLD_RUN_AGE = int(os.environ["HUBGREP_OLD_RUN_AGE"])
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    INDEXER_API_KEY = os.environ.get("HUBGREP_INDEXER_API_KEY", None)
+    INDEXER_API_KEY = os.environ["HUBGREP_INDEXER_API_KEY"]
+    LOGLEVEL = os.environ.get("HUBGREP_INDEXER_LOGLEVEL", "debug")

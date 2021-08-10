@@ -1,49 +1,25 @@
 # HubGrep Indexer
 
-WIP
+Backend for various crawlers
 
 
-backend for various crawlers
+## Documentation
 
-## setup
+[![Documentation Status](https://readthedocs.org/projects/hubgrep-documentation/badge/?version=latest)](https://docs.hubgrep.io/en/latest/?badge=latest)
 
-
-create a config by copying `.env.dist` to `.env`, and add the missing values.
-
-then start the service and database
-
-    docker-compose up
-
-run the initial migration in the container:
-
-    docker-compose run --rm hubgrep_indexer /bin/bash
-    flask db upgrade
-
-also, you can import (and export) a list of hosting services:
-
-    flask cli export-hosters
-    flask cli import-hosters
-
-## dev setup
-
-and maybe you want to have a container to run cli commands:
-
-    docker-compose run --rm hubgrep_indexer /bin/bash
-
-in the container you have to run the db migrations
-
-    # to create the migration files
-    flask db migrate
-
-    # to run the actual upgrade
-    flask db upgrade
+You can find the **supported services, documentation for deployments and development setup** over at [docs.hubgrep.io](https://docs.hubgrep.io/en/latest/)
 
 
+## Funded from March 2021 until August 2021 by
 
-
-afterwards, set up your crawlers for the added platforms (see crawler repos)
-
-
-
+<p align="center">
+    <a href="https://www.bmbf.de/en/" rel="nofollow">
+        <img src="/logos/bmbf_en.jpg" alt="Logo of the German Ministry for Education and Research" style="max-width:100%;" height="150px">
+    </a>
+    &nbsp; &nbsp; &nbsp; &nbsp;
+    <a href="https://prototypefund.de/en/" rel="nofollow">
+        <img src="/logos/prototype_fund.svg" alt="Logo of the Prototype Fund" style="max-width:100%;" height="150px">
+    </a>
+</p>
 
 
