@@ -12,6 +12,8 @@ from flask_login import LoginManager, UserMixin
 from hubgrep_indexer.lib.init_logging import init_logging
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
@@ -87,6 +89,10 @@ def create_app():
     app.register_blueprint(cli_bp)
     app.register_blueprint(results_bp)
 
+    # make app use the correct values from x-forwarded-for and x-forwarded-host headers
+    # fixes generating wrong url_for domains and schemes
+    app = ProxyFix(app, x_for=1, x_host=1)
+    
     return app
 
 
