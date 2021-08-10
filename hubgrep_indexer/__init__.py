@@ -91,8 +91,9 @@ def create_app():
 
     # make app use the correct values from x-forwarded-for and x-forwarded-host headers
     # fixes generating wrong url_for domains and schemes
-    app = ProxyFix(app, x_for=1, x_host=1)
-    
+    # https://stackoverflow.com/questions/34802316/make-flasks-url-for-use-the-https-scheme-in-an-aws-load-balancer-without-mess#comment120003707_45333882
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_port=1)
+
     return app
 
 
