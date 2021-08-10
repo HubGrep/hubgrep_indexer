@@ -12,6 +12,8 @@ from flask_login import LoginManager, UserMixin
 from hubgrep_indexer.lib.init_logging import init_logging
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
@@ -86,6 +88,11 @@ def create_app():
     app.register_blueprint(frontend)
     app.register_blueprint(cli_bp)
     app.register_blueprint(results_bp)
+
+    # make app use the correct values from x-forwarded-for and x-forwarded-host headers
+    # fixes generating wrong url_for domains and schemes
+    # https://stackoverflow.com/questions/34802316/make-flasks-url-for-use-the-https-scheme-in-an-aws-load-balancer-without-mess#comment120003707_45333882
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_port=1)
 
     return app
 
