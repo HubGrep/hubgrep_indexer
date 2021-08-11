@@ -41,49 +41,6 @@ services:
       - hubgrep_indexer
       - hubgrep
 
-  prometheus:
-    image: prom/prometheus
-    ports:
-      - 127.0.0.1:9090:9090
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - hubgrep_indexer
-      - hubgrep
-    mem_limit: 1024m
-    command: 
-        - --config.file=/etc/prometheus/prometheus.yml
-        - --storage.tsdb.path=/prometheus
-        - --web.console.libraries=/usr/share/prometheus/console_libraries
-        - --web.console.templates=/usr/share/prometheus/consoles
-        - --storage.tsdb.retention.time=7d
-
-  # system metrics
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
-    volumes:
-    - /:/rootfs:ro
-    - /var/run:/var/run:rw
-    - /sys:/sys:ro
-    - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - hubgrep_indexer
-
-  # postgres metrics
-  postgres_prometheus_exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter
-    environment: 
-      DATA_SOURCE_URI: postgres/${POSTGRES_DB}?sslmode=disable
-      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD}
-      DATA_SOURCE_USER: ${POSTGRES_USER}
-      PG_EXPORTER_WEB_LISTEN_ADDRESS: 0.0.0.0:8080
-      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
-    networks:
-      - hubgrep_indexer
-
-
-
 networks:
   hubgrep_indexer:
   hubgrep:
