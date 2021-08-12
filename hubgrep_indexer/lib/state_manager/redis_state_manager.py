@@ -99,12 +99,14 @@ class RedisStateManager(AbstractStateManager):
         self.redis.hset(redis_key, block.uid, block.to_json())
 
     def set_run_created_ts(self, hoster_prefix: str, timestamp: float = None):
+        """Set a timestamp for when a run was created. No value or None will use time.time()."""
         if timestamp is None:
             timestamp = time.time()
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         self.redis.set(redis_key, timestamp)
 
     def get_run_created_ts(self, hoster_prefix: str):
+        """When was the current run created? Defaults to 0 if it never ran."""
         redis_key = self._get_redis_key(hoster_prefix, self.run_created_ts_key)
         if not self.redis.get(redis_key):
             self.set_run_created_ts(hoster_prefix, 0)

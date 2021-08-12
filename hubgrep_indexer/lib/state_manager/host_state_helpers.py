@@ -1,7 +1,6 @@
 import logging
 from typing import Union
 
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from hubgrep_indexer.lib.block import Block
 from hubgrep_indexer.constants import (
     HOST_TYPE_GITHUB,
@@ -9,6 +8,7 @@ from hubgrep_indexer.constants import (
     HOST_TYPE_GITLAB,
 )
 from hubgrep_indexer.models.hosting_service import HostingService
+from hubgrep_indexer import state_manager
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ class IStateHelper:
     def resolve_state(
             cls,
             hosting_service: HostingService,
-            state_manager: AbstractStateManager,
             block_uid: str,
             parsed_repos: list,
     ) -> Union[bool, None]:
@@ -42,10 +41,13 @@ class IStateHelper:
 
         if not block:
             # Block has already been deleted from the previous run, no state changes
-            logger.warning(f"{hosting_service} - block no longer exists - no state changes, uid: {block_uid}")
+            logger.warning(f"{hosting_service} - block no longer exists - no run state changes, uid: {block_uid}")
+            print("-a")
             return None
         if block.run_created_ts != run_created_ts:
-            logger.warning(f"{hosting_service} - skipping state update for outdated block: {block}")
+            logger.warning(f"{hosting_service} - skipping run state update and finishing outdated block: {block}")
+            state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=block.uid)
+            print("-A")
             return None
 
         state_manager.finish_block(
@@ -59,23 +61,19 @@ class IStateHelper:
         # check on the effects of the block transaction
         has_reached_end = cls.has_reached_end(
             hosting_service=hosting_service,
-            state_manager=state_manager,
             parsed_repos=parsed_repos,
             block=block,
         )
         has_too_many_empty_results = cls.has_too_many_consecutive_empty_results(
             hosting_service=hosting_service,
-            state_manager=state_manager
         )
 
         if has_reached_end:
             logger.info(f"crawler reached end for {hosting_service}")
             state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
-            #state_manager.finish_run(hoster_prefix=hosting_service_id)
         elif has_too_many_empty_results:
             logger.info(f"crawler reach max empty results for {hosting_service}")
             state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
-            #state_manager.finish_run(hoster_prefix=hosting_service_id)
         else:
             # we are somewhere in the middle of a hosters repos
             # and we count up our confirmed ids and continue
@@ -83,6 +81,7 @@ class IStateHelper:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
+            print("DID NOT REACH END", hosting_service, parsed_repos)
             state_manager.set_highest_confirmed_block_repo_id(hoster_prefix=hosting_service.id, repo_id=repo_id)
 
         has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
@@ -91,23 +90,18 @@ class IStateHelper:
             # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
             if cls.has_active_blocks(
                     hosting_service=hosting_service,
-                    state_manager=state_manager,
                     run_created_ts=run_created_ts
             ):
+                print("STILL OPEN BLOCKS")
                 return None
             else:
+                print("-D")
                 logger.info(f"{hosting_service} - run completed - last processed block: {block}")
-                state_manager.finish_run(hoster_prefix=hosting_service.id)
 
         return has_run_hit_end
 
     @classmethod
-    def has_active_blocks(
-            cls,
-            hosting_service: HostingService,
-            state_manager: AbstractStateManager,
-            run_created_ts: float,
-    ) -> bool:
+    def has_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> bool:
         for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
             if block.run_created_ts == run_created_ts and not block.is_dead():
                 # there are still active blocks open in this run, so we don't finish
@@ -115,9 +109,7 @@ class IStateHelper:
         return False
 
     @classmethod
-    def has_too_many_consecutive_empty_results(
-            cls, hosting_service: HostingService, state_manager: AbstractStateManager
-    ) -> bool:
+    def has_too_many_consecutive_empty_results(cls, hosting_service: HostingService) -> bool:
         has_too_many_empty_results = (
                 state_manager.get_empty_results_counter(hoster_prefix=hosting_service.id)
                 >= cls.empty_results_max
@@ -125,13 +117,7 @@ class IStateHelper:
         return has_too_many_empty_results
 
     @classmethod
-    def has_reached_end(
-            cls,
-            hosting_service: HostingService,
-            state_manager: AbstractStateManager,
-            block: Block,
-            parsed_repos: list,
-    ) -> bool:
+    def has_reached_end(cls, hosting_service: HostingService, block: Block, parsed_repos: list) -> bool:
         """
         Try to find out if we reached the end of repos on this hoster.
 
@@ -154,25 +140,18 @@ class IStateHelper:
 
         # get ending repo id of the block after the last confirmed one
         last_block_id = highest_confirmed_id + state_manager.batch_size
-
+        print("STUFF", highest_confirmed_id, last_block_id, block.to_id)
         # check if our current empty block comes after a block with confirmed results
         return block.to_id == last_block_id
 
 
 class GitHubStateHelper(IStateHelper):
     @classmethod
-    def has_reached_end(
-            cls,
-            hosting_service: HostingService,
-            state_manager: AbstractStateManager,
-            block: Block,
-            parsed_repos: list,
-    ) -> bool:
+    def has_reached_end(cls, hosting_service: HostingService, block: Block, parsed_repos: list) -> bool:
         """
         We default to False for GitHub as we receive lots of gaps within results.
-        Maybe a whole block contains private
-        repos and we get nothing back - therefore we cannot assume that we have
-        reached the end when a block is empty.
+        Maybe a whole block contains private repos and we get nothing back,
+        therefore we cannot assume that we have reached the end when a block is empty.
 
         We instead rely on "IStateHelper.has_too_many_consecutive_empty_results(...)"
         to resolve and reset GitHub.
@@ -188,10 +167,10 @@ class GitLabStateHelper(IStateHelper):
     pass
 
 
-def get_state_helper(hosting_service_type):
+def get_state_helper(hosting_service: HostingService):
     state_helpers = {
         HOST_TYPE_GITHUB: GitHubStateHelper,
         HOST_TYPE_GITEA: GiteaStateHelper,
         HOST_TYPE_GITLAB: GitLabStateHelper,
     }
-    return state_helpers[hosting_service_type]()
+    return state_helpers[hosting_service.type]()

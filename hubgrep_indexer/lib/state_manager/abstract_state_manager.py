@@ -95,6 +95,7 @@ class AbstractStateManager:
         return self._delete_block(hoster_prefix, block_uid)
 
     def set_run_created_ts(self, hoster_prefix: str, timestamp: float = None):
+        """Set a timestamp for when a run was created. No value or None will use time.time()."""
         raise NotImplementedError
 
     def get_run_created_ts(self, hoster_prefix) -> float:
@@ -136,6 +137,9 @@ class AbstractStateManager:
         """
         Return the next new block.
         """
+        if self.get_has_run_hit_end(hoster_prefix):
+            logger.warning(f"{hoster_prefix} - hoster was finished, resetting for a new run!")
+            self.finish_run(hoster_prefix)
         highest_block_repo_id = self.get_highest_block_repo_id(hoster_prefix)
         from_id = highest_block_repo_id + 1
         to_id = highest_block_repo_id + self.batch_size

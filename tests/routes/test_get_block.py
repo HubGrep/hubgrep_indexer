@@ -1,5 +1,7 @@
 import pytest
 
+from hubgrep_indexer import state_manager
+
 from tests.helpers import HOSTER_TYPES
 
 
@@ -40,7 +42,7 @@ class TestGetBlock:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_get_loadbalanced_block(self, test_client, test_state_manager, hosting_service):
+    def test_get_loadbalanced_block(self, test_client, hosting_service):
         """
         we should have a test over more hosters when we have a behavior defined
         """
@@ -49,7 +51,7 @@ class TestGetBlock:
                 f"/api/v1/hosters/{hosting_service.type}/loadbalanced_block"
             )
             assert response.json["from_id"] == 1
-            assert response.json["to_id"] == test_state_manager.batch_size
+            assert response.json["to_id"] == state_manager.batch_size
             response = client.get(f"/api/v1/hosters/{hosting_service.id}/block")
-            assert response.json["from_id"] == test_state_manager.batch_size + 1
-            assert response.json["to_id"] == test_state_manager.batch_size * 2
+            assert response.json["from_id"] == state_manager.batch_size + 1
+            assert response.json["to_id"] == state_manager.batch_size * 2

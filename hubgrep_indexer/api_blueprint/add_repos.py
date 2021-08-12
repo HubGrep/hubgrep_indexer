@@ -62,13 +62,12 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     logger.debug(
         f"added {len(parsed_repos)} repos for {hosting_service} - took {ts_db_end - ts_db_start}s"
     )
-    state_helper = get_state_helper(hosting_service.type)
+    state_helper = get_state_helper(hosting_service=hosting_service)
 
     # will block, if the lock is already aquired, and go on after release
     with state_manager.get_lock(hosting_service_id):
         is_run_finished = state_helper.resolve_state(
             hosting_service=hosting_service,
-            state_manager=state_manager,
             block_uid=block_uid,
             parsed_repos=parsed_repos,
         )
