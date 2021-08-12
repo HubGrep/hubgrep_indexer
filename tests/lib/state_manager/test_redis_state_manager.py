@@ -3,6 +3,7 @@ import time
 from multiprocessing import Process
 
 from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
+from flask import current_app
 from hubgrep_indexer import state_manager
 from tests.helpers import HOSTER_TYPES
 
@@ -62,6 +63,27 @@ class TestRedisStateManager:
                 hoster_prefix=HOSTER_PREFIX, block_uid=block.uid)
             assert len(state_manager.get_blocks_list(
                 hoster_prefix=HOSTER_PREFIX)) == 0
+
+    def test_delete_dead_blocks(self, test_client):
+        with test_client:
+            # create a "dead" block
+            # with attempts at [0,0,0]
+            block = state_manager.get_next_block(hoster_prefix=HOSTER_PREFIX)
+            block.attempts_at = [0] * current_app.config["BLOCK_MAX_RETRIES"]
+            state_manager.update_block(HOSTER_PREFIX, block)
+
+            # just a check if its in the state manager
+            blocks = state_manager.get_blocks_list(HOSTER_PREFIX)
+            assert len(blocks) == 1
+
+            # delete it, since its dead
+            dead_blocks = state_manager.delete_dead_blocks(HOSTER_PREFIX)
+            assert len(dead_blocks) == 1
+            assert dead_blocks[0].uid == block.uid
+
+            # block list is empty now
+            blocks = state_manager.get_blocks_list(HOSTER_PREFIX)
+            assert len(blocks) == 0
 
     def test_finish_block(self, test_client):
         self.test_delete_block(test_client=test_client)

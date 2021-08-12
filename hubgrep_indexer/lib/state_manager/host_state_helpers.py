@@ -36,6 +36,7 @@ class IStateHelper:
         Returns state_manager.get_run_is_finished() OR None
         - true/false if we reached end, None if block is unrelated to the current run
         """
+        logger.info(f"resolving state for {block_uid}")
         run_created_ts = state_manager.get_run_created_ts(hoster_prefix=hosting_service.id)
         block = state_manager.get_block(hoster_prefix=hosting_service.id, block_uid=block_uid)
 
@@ -81,29 +82,43 @@ class IStateHelper:
                 repo_id = block.ids[-1]
             else:
                 repo_id = block.to_id
-            print("DID NOT REACH END", hosting_service, parsed_repos)
             state_manager.set_highest_confirmed_block_repo_id(hoster_prefix=hosting_service.id, repo_id=repo_id)
 
         has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
-        if has_run_hit_end:
-            # the run is finished (as in, we hit the end), but we may have blocks open
-            # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
-            if cls.has_active_blocks(
-                    hosting_service=hosting_service,
-                    run_created_ts=run_created_ts
-            ):
-                print("STILL OPEN BLOCKS")
-                return None
-            else:
-                print("-D")
-                logger.info(f"{hosting_service} - run completed - last processed block: {block}")
+        if not has_run_hit_end:
+            return False
 
-        return has_run_hit_end
+        # the run is finished (as in, we hit the end), but we may have blocks open
+        # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
+        dead_blocks = cls.delete_dead_blocks(hosting_service)
+        if dead_blocks:
+            logger.warning(f"{hosting_service} - deleted dead blocks: {dead_blocks}")
+
+        if cls.has_active_blocks(
+                hosting_service=hosting_service,
+                run_created_ts=run_created_ts
+        ):
+            logger.info(f"{hosting_service} has hit end, but unanswered blocks. not finishing this run yet.")
+            return None
+
+        logger.info(f"{hosting_service} - run completed - last processed block: {block}")
+        return True
+
+    @classmethod
+    def delete_dead_blocks(cls, hosting_service):
+        """
+        remove dead blocks from state manager
+        """
+        dead_blocks = state_manager.delete_dead_blocks(hoster_prefix=hosting_service.id)
+        return dead_blocks
 
     @classmethod
     def has_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> bool:
+        """
+        True if we have blocks open for this hoster
+        """
         for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
-            if block.run_created_ts == run_created_ts and not block.is_dead():
+            if block.run_created_ts == run_created_ts:
                 # there are still active blocks open in this run, so we don't finish
                 return True
         return False
@@ -135,12 +150,11 @@ class IStateHelper:
 
         # get the ending repo id from a block we have seen containing results
         highest_confirmed_id = state_manager.get_highest_confirmed_block_repo_id(
-            hoster_prefix=HostingService.id
+            hoster_prefix=hosting_service.id
         )
 
         # get ending repo id of the block after the last confirmed one
         last_block_id = highest_confirmed_id + state_manager.batch_size
-        print("STUFF", highest_confirmed_id, last_block_id, block.to_id)
         # check if our current empty block comes after a block with confirmed results
         return block.to_id == last_block_id
 

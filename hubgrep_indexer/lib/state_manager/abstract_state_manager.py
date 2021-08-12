@@ -172,6 +172,19 @@ class AbstractStateManager:
                 return block
         return None
 
+    def delete_dead_blocks(self, hoster_prefix, timestamp_now=None) -> List[Block]:
+        """
+        delete "dead" blocks from state
+        """
+        if not timestamp_now:
+            timestamp_now = time.time()
+        dead_blocks = []
+        for block in self.get_blocks_list(hoster_prefix):
+            if block.is_dead():
+                dead_blocks.append(block)
+                self._delete_block(hoster_prefix, block.uid)
+        return dead_blocks
+
     def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
         """ Attach an api_key to a machine_id. """
         raise NotImplementedError

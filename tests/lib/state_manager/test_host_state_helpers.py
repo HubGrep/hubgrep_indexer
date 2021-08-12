@@ -31,13 +31,16 @@ class TestHostStateHelpers:
             state_manager.set_highest_confirmed_block_repo_id(
                 hoster_prefix=hosting_service.id, repo_id=old_block.to_id
             )
-            print("OLD?", state_manager.get_highest_confirmed_block_repo_id(hosting_service.id), old_block.to_id)
+            logger.debug(f"test state manager: {state_manager}")
+            logger.debug(f"before finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
             state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=old_block.uid)
-            print("OLD?", state_manager.get_highest_confirmed_block_repo_id(hosting_service.id), old_block.to_id)
-
+            logger.debug(f"after finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
+            logger.debug(f"test state manager: {state_manager}")
+                    
             repos = []  # we're testing against what happens when we receive empty results
             new_block = state_manager.get_next_block(hosting_service.id)
-            print("NEW?", state_manager.get_highest_confirmed_block_repo_id(hosting_service.id), new_block.to_id)
+            logger.debug(f"after get_next_block {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {new_block.to_id}")
+            logger.debug(f"test state manager: {state_manager}")
 
             state_helper = get_state_helper(hosting_service=hosting_service)
 
