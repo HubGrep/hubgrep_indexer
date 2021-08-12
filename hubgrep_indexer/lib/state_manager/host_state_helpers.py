@@ -43,12 +43,10 @@ class IStateHelper:
         if not block:
             # Block has already been deleted from the previous run, no state changes
             logger.warning(f"{hosting_service} - block no longer exists - no run state changes, uid: {block_uid}")
-            print("-a")
             return None
         if block.run_created_ts != run_created_ts:
             logger.warning(f"{hosting_service} - skipping run state update and finishing outdated block: {block}")
             state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=block.uid)
-            print("-A")
             return None
 
         state_manager.finish_block(
@@ -99,7 +97,7 @@ class IStateHelper:
                 run_created_ts=run_created_ts
         ):
             logger.info(f"{hosting_service} has hit end, but unanswered blocks. not finishing this run yet.")
-            return None
+            return False
 
         logger.info(f"{hosting_service} - run completed - last processed block: {block}")
         return True

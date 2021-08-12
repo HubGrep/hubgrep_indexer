@@ -64,7 +64,7 @@ class TestHostStateHelpers:
             self, test_client, hosting_service: HostingService
     ):
         with test_client:
-            print(f"testing for: {hosting_service.api_url} {hosting_service.id}")
+            logger.info(f"testing for: {hosting_service.api_url} {hosting_service.id}")
             first_block = get_block_for_crawler(hosting_service_id=hosting_service.id)
             assert first_block
             route_put_repos(test_client=test_client,
@@ -212,7 +212,7 @@ class TestHostStateHelpers:
             runs = 10
             run_created_ats = []
             for run_nr in range(runs):
-                print(f"run {run_nr}")
+                logger.info(f"run {run_nr}")
                 # get some results
                 first_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
                 first_id = id_start * run_nr + 1
