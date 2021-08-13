@@ -10,6 +10,7 @@ from hubgrep_indexer.lib.block_helpers import (
     get_loadbalanced_block_for_crawler,
     resolve_api_key,
 )
+from hubgrep_indexer import state_manager
 from tests.conftest import _add_hosting_service
 from tests.helpers import HOSTER_TYPES
 
@@ -46,7 +47,7 @@ class TestBlockHelpers:
             assert block_dict['callback_url']
 
     @pytest.mark.parametrize("hoster_type", HOSTER_TYPES)
-    def test_get_loadbalanced_block(self, test_client, test_state_manager, hoster_type):
+    def test_get_loadbalanced_block(self, test_client, hoster_type):
         """
         register two hosting_services, test load balancing
 
@@ -68,8 +69,8 @@ class TestBlockHelpers:
                 type=hoster_type
             )
 
-            test_state_manager.set_run_created_ts(timed_out_hosting_service.id, 0)
-            test_state_manager.set_run_created_ts(recent_hosting_service.id, time.time())
+            state_manager.set_run_created_ts(timed_out_hosting_service.id, 0)
+            state_manager.set_run_created_ts(recent_hosting_service.id, time.time())
 
             block_dict = get_loadbalanced_block_for_crawler(hoster_type)
             assert block_dict["hosting_service"]["id"] == timed_out_hosting_service.id

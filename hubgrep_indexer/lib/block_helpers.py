@@ -31,6 +31,12 @@ def _get_block_dict(hosting_service_id) -> Dict:
         logger.info(f"re-attempting timed out block, uid: {timed_out_block.uid}")
         block = timed_out_block
     else:
+        has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service_id)
+        blocks_list = state_manager.get_blocks_list(hoster_prefix=hosting_service_id)
+        if has_run_hit_end and blocks_list:
+            # we hit the end, but blocks are still open - dont start the next run yet
+            logger.debug("we have been asked for a block, but we hit the end and are still waiting for blocks")
+            return None
         block = state_manager.get_next_block(hosting_service_id)
 
     hosting_service = HostingService.query.get(hosting_service_id)

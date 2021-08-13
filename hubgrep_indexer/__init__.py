@@ -11,6 +11,7 @@ from flask_login import LoginManager, UserMixin
 
 from hubgrep_indexer.lib.init_logging import init_logging
 from hubgrep_indexer.lib.state_manager.redis_state_manager import RedisStateManager
+from flask_executor import Executor
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -21,6 +22,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 state_manager = RedisStateManager()
 login_manager = LoginManager()
+executor = Executor()
 
 app = Flask(__name__)
 # fix keep-alive in dev server (dropped connections from client sessions)
@@ -46,6 +48,7 @@ def create_app():
 
     db.init_app(app)
     migrate.init_app(app, db=db)
+    executor.init_app(app)
 
     login_manager.init_app(app)
     user_crawlers = User(api_key=app.config["INDEXER_API_KEY"])

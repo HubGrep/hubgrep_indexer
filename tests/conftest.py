@@ -5,7 +5,7 @@ import pytest
 
 from hubgrep_indexer.lib.init_logging import init_logging
 
-from hubgrep_indexer import create_app, db, state_manager, RedisStateManager
+from hubgrep_indexer import create_app, db, state_manager
 from hubgrep_indexer.models.hosting_service import HostingService
 from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.gitea import GiteaRepository
@@ -17,14 +17,20 @@ from tests.helpers import HOSTER_TYPES
 init_logging()
 
 
+@pytest.fixture(autouse=True)
+def before_and_after_each_test():
+    # before each test
+    state_manager.redis = redislite.Redis()
+    yield
+    # after each test
+    state_manager.redis.flushdb()
+
+
 @pytest.fixture(scope="function")
 def test_app(request):
     app = create_app()
 
     db_fd, file_path = tempfile.mkstemp()
-
-    # always overwrite redis with redislite so that whatever a test triggers, redis will be replaced with a test version
-    state_manager.redis = redislite.Redis()
 
     with app.app_context():
         db.create_all()
@@ -43,7 +49,6 @@ def test_app(request):
         # tear down db/redis after test
         os.close(db_fd)
         os.unlink(file_path)
-        state_manager.redis.flushdb()  # always flush our test redis after a test
 
     request.addfinalizer(teardown)
 
@@ -54,15 +59,6 @@ def test_client(test_app):
     ctx.push()
     yield test_app.test_client()
     ctx.pop()
-
-
-@pytest.fixture()
-def test_state_manager():
-    # TODO refactor all tests using this and get rid of this fixture - initialize state_manager with redislite at the
-    # TODO top of this file (outside test fixtures/functions) and flush after each test
-    state_manager.redis = redislite.Redis()
-    yield state_manager
-    state_manager.redis.flushdb()
 
 
 def _add_hosting_service(api_url: str,

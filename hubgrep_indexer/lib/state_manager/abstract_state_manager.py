@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 from hubgrep_indexer.lib.block import Block
 
@@ -12,7 +12,7 @@ class AbstractStateManager:
     Base class for state managers.
     """
 
-    def __init__(self, batch_size=1000, block_timeout=1000):
+    def __init__(self, batch_size=1000, block_timeout=100):
         self.batch_size = batch_size  # block size for a crawler
         self.block_timeout = block_timeout  # seconds
 
@@ -25,7 +25,7 @@ class AbstractStateManager:
             highest_confirmed_repo_id=self.get_highest_confirmed_block_repo_id(hoster_prefix),
             empty_results_count=self.get_empty_results_counter(hoster_prefix),
             run_created_ts=self.get_run_created_ts(hoster_prefix),
-            run_is_finished=self.get_is_run_finished(hoster_prefix),
+            run_is_finished=self.get_has_run_hit_end(hoster_prefix),
         )
 
     def get_highest_block_repo_id(self, hoster_prefix: str) -> int:
@@ -73,12 +73,17 @@ class AbstractStateManager:
         """Deletes from state and returns the deleted Block."""
         raise NotImplementedError
 
-    def get_blocks(self, hoster_prefix: str) -> Dict[str, Block]:
+    def get_blocks_dict(self, hoster_prefix: str) -> Dict[str, Block]:
+        """Get all blocks as a dict accessed by their id."""
+        raise NotImplementedError
+
+    def get_blocks_list(self, hoster_prefix: str) -> List[Block]:
+        """Get all blocks in a list."""
         raise NotImplementedError
 
     def get_block(self, hoster_prefix: str, block_uid: str) -> Block:
         """Return an existing Block or None"""
-        blocks = self.get_blocks(hoster_prefix=hoster_prefix)
+        blocks = self.get_blocks_dict(hoster_prefix=hoster_prefix)
         return blocks.get(block_uid, None)
 
     def update_block(self, hoster_prefix: str, block: Block):
@@ -90,6 +95,7 @@ class AbstractStateManager:
         return self._delete_block(hoster_prefix, block_uid)
 
     def set_run_created_ts(self, hoster_prefix: str, timestamp: float = None):
+        """Set a timestamp for when a run was created. No value or None will use time.time()."""
         raise NotImplementedError
 
     def get_run_created_ts(self, hoster_prefix) -> float:
@@ -100,7 +106,7 @@ class AbstractStateManager:
         raise NotImplementedError
 
     def _reset_blocks(self, hoster_prefix: str):
-        for block in list(self.get_blocks(hoster_prefix).values())[:]:
+        for block in self.get_blocks_list(hoster_prefix):
             self._delete_block(hoster_prefix, block_uid=block.uid)
 
     def reset(self, hoster_prefix: str):
@@ -110,32 +116,30 @@ class AbstractStateManager:
         """
         logger.warning(f"reset state for hoster: {hoster_prefix}")
         self.set_run_created_ts(hoster_prefix, None)
-        self.set_is_run_finished(hoster_prefix, False)
+        self.set_has_run_hit_end(hoster_prefix, False)
         self.set_highest_block_repo_id(hoster_prefix, 0)
         self.set_highest_confirmed_block_repo_id(hoster_prefix, 0)
         self.set_empty_results_counter(hoster_prefix, 0)
         self._reset_blocks(hoster_prefix)
 
     def finish_run(self, hoster_prefix: str):
-        """
-        after we have finished crawling this hoster,
-        set run_is_finished
-        """
-        self.set_is_run_finished(hoster_prefix, True)
+        """Wrap up and end the current run."""
+        logger.warning(f"hoster_prefix: {hoster_prefix} was finished, resetting for a new run!")
+        self.reset(hoster_prefix=hoster_prefix)
 
-    def set_is_run_finished(self, hoster_prefix: str, is_finished: bool):
+    def set_has_run_hit_end(self, hoster_prefix: str, has_hit_end: bool):
         raise NotImplementedError
 
-    def get_is_run_finished(self, hoster_prefix: str) -> bool:
+    def get_has_run_hit_end(self, hoster_prefix: str) -> bool:
         raise NotImplementedError
 
     def get_next_block(self, hoster_prefix: str) -> Block:
         """
         Return the next new block.
         """
-        if self.get_is_run_finished(hoster_prefix):
-            logger.warning("hoster was finished, resetting for a new run!")
-            self.reset(hoster_prefix)
+        if self.get_has_run_hit_end(hoster_prefix):
+            logger.warning(f"{hoster_prefix} - hoster was finished, resetting for a new run!")
+            self.finish_run(hoster_prefix)
         highest_block_repo_id = self.get_highest_block_repo_id(hoster_prefix)
         from_id = highest_block_repo_id + 1
         to_id = highest_block_repo_id + self.batch_size
@@ -160,13 +164,22 @@ class AbstractStateManager:
         if not timestamp_now:
             timestamp_now = time.time()
 
-        for uid, block in self.get_blocks(hoster_prefix).items():
+        for block in self.get_blocks_list(hoster_prefix):
             age = timestamp_now - block.attempts_at[-1]
-            if age > self.block_timeout:
+            if not block.is_dead() and age > self.block_timeout:
                 block.attempts_at.append(timestamp_now)
                 self.update_block(hoster_prefix=hoster_prefix, block=block)
                 return block
         return None
+
+    def delete_dead_blocks(self, hoster_prefix) -> List[Block]:
+        """ Delete "dead" blocks from state. Return deleted blocks. """
+        dead_blocks = []
+        for block in self.get_blocks_list(hoster_prefix):
+            if block.is_dead():
+                dead_blocks.append(block)
+                self._delete_block(hoster_prefix, block.uid)
+        return dead_blocks
 
     def set_machine_api_key(self, hosting_service_id: str, machine_id: str, api_key: str):
         """ Attach an api_key to a machine_id. """
