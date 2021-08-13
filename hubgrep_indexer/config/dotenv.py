@@ -18,4 +18,4 @@ class DotEnvConfig(Config):
     INDEXER_API_KEY = os.environ["HUBGREP_INDEXER_API_KEY"]
     LOGLEVEL = os.environ.get("HUBGREP_INDEXER_LOGLEVEL", "debug")
 
-    BLOCK_MAX_RETRIES = os.environ.get("HUBGREP_BLOCK_MAX_RETRIES", 3)
+    BLOCK_MAX_RETRIES = int(os.environ.get("HUBGREP_BLOCK_MAX_RETRIES", 3))
