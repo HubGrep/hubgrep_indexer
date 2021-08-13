@@ -118,6 +118,8 @@ def add_api_key(api_url, api_key):
         exit()
 
     hosting_service.add_api_key(api_key)
+    db.session.add(hosting_service)
+    db.session.commit()
     print("key added!")
 
 
@@ -144,4 +146,6 @@ def delete_api_key(api_url, api_key):
         _release_api_key(hosting_service, api_key)
 
     hosting_service.delete_api_key(api_key)
+    db.session.add(hosting_service)
+    db.session.commit()
     print("deleted api key")
