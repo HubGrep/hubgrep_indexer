@@ -2,11 +2,7 @@ import logging
 import pytest
 
 from hubgrep_indexer.api_blueprint.add_repos import _append_repos
-from hubgrep_indexer.constants import (
-    HOST_TYPE_GITHUB,
-    HOST_TYPE_GITLAB,
-    HOST_TYPE_GITEA,
-)
+from hubgrep_indexer.constants import HOST_TYPE_GITHUB
 from hubgrep_indexer.lib.block_helpers import get_block_for_crawler
 from hubgrep_indexer.lib.state_manager.host_state_helpers import get_state_helper
 from hubgrep_indexer.models.hosting_service import HostingService
@@ -22,9 +18,7 @@ class TestHostStateHelpers:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_state_helpers_has_reached_end_empty(
-            self, test_client, hosting_service
-    ):
+    def test_state_helpers_has_reached_end_empty(self, test_client, hosting_service):
         with test_client:
             # init state for a already completed block
             old_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
@@ -32,14 +26,17 @@ class TestHostStateHelpers:
                 hoster_prefix=hosting_service.id, repo_id=old_block.to_id
             )
             logger.debug(f"test state manager: {state_manager}")
-            logger.debug(f"before finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
+            logger.debug(
+                f"before finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
             state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=old_block.uid)
-            logger.debug(f"after finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
+            logger.debug(
+                f"after finish: {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {old_block.to_id}")
             logger.debug(f"test state manager: {state_manager}")
-                    
+
             repos = []  # we're testing against what happens when we receive empty results
             new_block = state_manager.get_next_block(hosting_service.id)
-            logger.debug(f"after get_next_block {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {new_block.to_id}")
+            logger.debug(
+                f"after get_next_block {state_manager.get_highest_confirmed_block_repo_id(hosting_service.id)}, {new_block.to_id}")
             logger.debug(f"test state manager: {state_manager}")
 
             state_helper = get_state_helper(hosting_service=hosting_service)
@@ -97,9 +94,7 @@ class TestHostStateHelpers:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_state_helpers_too_many_consecutive_empty(
-            self, hosting_service
-    ):
+    def test_state_helpers_too_many_consecutive_empty(self, hosting_service):
         state_helper = get_state_helper(hosting_service=hosting_service)
         state_manager.set_empty_results_counter(
             hoster_prefix=hosting_service.id, count=state_helper.empty_results_max
@@ -112,9 +107,31 @@ class TestHostStateHelpers:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_state_helpers_resolve_state_continue(
-            self, test_client, hosting_service
-    ):
+    def test_state_helpers_get_active_blocks(self, test_client, hosting_service):
+        with test_client:
+            state_helper = get_state_helper(hosting_service=hosting_service)
+
+            old_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
+            # a run is only created after the first block has been asked for - hence we get the run_created_ts after it
+            run_created_ts = state_manager.get_run_created_ts(hoster_prefix=hosting_service.id)
+            old_active_blocks = state_helper.get_active_blocks(hosting_service=hosting_service,
+                                                               run_created_ts=run_created_ts)
+            assert len(old_active_blocks) == 1
+
+            new_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
+            new_active_blocks = state_helper.get_active_blocks(hosting_service=hosting_service,
+                                                               run_created_ts=run_created_ts)
+            assert len(new_active_blocks) == 2
+            for block in new_active_blocks:
+                if not block.uid == old_block.uid and not block.uid == new_block.uid:
+                    assert False
+
+    @pytest.mark.parametrize(
+        'hosting_service',
+        HOSTER_TYPES,
+        indirect=True
+    )
+    def test_state_helpers_resolve_state_continue(self, test_client, hosting_service):
         with test_client:
             old_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
             state_helper = get_state_helper(hosting_service=hosting_service)
@@ -153,9 +170,7 @@ class TestHostStateHelpers:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_state_helpers_resolve_state_reset(
-            self, test_client, hosting_service
-    ):
+    def test_state_helpers_resolve_state_reset(self, test_client, hosting_service):
         with test_client:
             # init with an old block state (attempt to raise side-effects to fail this test, if we introduce them)
             old_block = state_manager.get_next_block(hoster_prefix=hosting_service.id)
@@ -195,9 +210,7 @@ class TestHostStateHelpers:
         HOSTER_TYPES,
         indirect=True
     )
-    def test_state_helpers_multiple_runs(
-            self, test_client, hosting_service
-    ):
+    def test_state_helpers_multiple_runs(self, test_client, hosting_service):
         with test_client:
             state_helper = get_state_helper(hosting_service=hosting_service)
             id_start = state_manager.batch_size

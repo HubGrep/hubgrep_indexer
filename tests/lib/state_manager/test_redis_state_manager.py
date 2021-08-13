@@ -2,7 +2,6 @@ import pytest
 import time
 from multiprocessing import Process
 
-from hubgrep_indexer.lib.state_manager.abstract_state_manager import AbstractStateManager
 from flask import current_app
 from hubgrep_indexer import state_manager
 from tests.helpers import HOSTER_TYPES

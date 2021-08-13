@@ -86,9 +86,7 @@ class IStateHelper:
 
         # 3 - indicate if a run is over, or still needs work
         has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
-        if not has_run_hit_end:
-            return False
-        else:
+        if has_run_hit_end:
             # the run is finished (as in, we hit the end), but we may have blocks open
             # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
             dead_blocks = state_manager.delete_dead_blocks(hoster_prefix=hosting_service.id)
@@ -103,13 +101,16 @@ class IStateHelper:
 
             logger.info(f"{hosting_service} - run completed - last processed block: {block}")
             return True
+        else:
+            return False
+
 
     @classmethod
     def get_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> List[Block]:
         """ Retrieve all blocks still active in the current run. """
         active_blocks = []
         for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
-            if block.run_created_ts == run_created_ts:
+            if block.run_created_ts == run_created_ts and not block.is_dead():
                 active_blocks.append(block)
         return active_blocks
 
