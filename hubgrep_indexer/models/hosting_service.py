@@ -37,6 +37,26 @@ class HostingService(db.Model):
     def hoster_name(self):
         return str(urlparse(self.landingpage_url).netloc)
 
+    def delete_api_key(self, api_key: str):
+        """
+        Add an api key to this hoster.
+        Dont forget to commit afterwards!
+        """
+        # postgres arrays are immutable, so we have to re-set the whole list
+        api_keys = list(self.api_keys)
+        api_keys.remove(api_key)
+        self.api_keys = api_keys
+
+    def add_api_key(self, api_key: str):
+        """
+        Remove an api key from this hoster.
+        Dont forget to commit afterwards!
+        """
+        # postgres arrays are immutable, so we have to re-set the whole list
+        api_keys = list(self.api_keys)
+        api_keys.append(api_key)
+        self.api_keys = api_keys
+
     def get_exports_dict(self, unified=False) -> List[Dict]:
         """
         Shorthand for the query to this hosters exports, sorted by datetime (newest first).
