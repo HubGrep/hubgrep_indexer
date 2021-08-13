@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Union, List
 
 from hubgrep_indexer.lib.block import Block
 from hubgrep_indexer.constants import (
@@ -45,7 +45,7 @@ class IStateHelper:
             logger.warning(f"{hosting_service} - block no longer exists - no run state changes, uid: {block_uid}")
             return None
         if block.run_created_ts != run_created_ts:
-            logger.warning(f"{hosting_service} - skipping run state update and finishing outdated block: {block}")
+            logger.warning(f"{hosting_service} - skipping run state update but finishing outdated block: {block}")
             state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=block.uid)
             return None
 
@@ -68,10 +68,10 @@ class IStateHelper:
         )
 
         if has_reached_end:
-            logger.info(f"crawler reached end for {hosting_service}")
+            logger.info(f"{hosting_service} - run has reached end")
             state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
         elif has_too_many_empty_results:
-            logger.info(f"crawler reach max empty results for {hosting_service}")
+            logger.info(f"{hosting_service} - run has reached max empty results")
             state_manager.set_has_run_hit_end(hoster_prefix=hosting_service.id, has_hit_end=True)
         else:
             # we are somewhere in the middle of a hosters repos
@@ -85,41 +85,32 @@ class IStateHelper:
         has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
         if not has_run_hit_end:
             return False
+        else:
+            # the run is finished (as in, we hit the end), but we may have blocks open
+            # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
+            dead_blocks = state_manager.delete_dead_blocks(hoster_prefix=hosting_service.id)
+            if dead_blocks:
+                logger.warning(f"{hosting_service} - deleted dead blocks: {dead_blocks}")
 
-        # the run is finished (as in, we hit the end), but we may have blocks open
-        # we dont want to trigger export-and-rotate until the blocks at least time out/max retries
-        dead_blocks = cls.delete_dead_blocks(hosting_service)
-        if dead_blocks:
-            logger.warning(f"{hosting_service} - deleted dead blocks: {dead_blocks}")
-
-        if cls.has_active_blocks(
-                hosting_service=hosting_service,
-                run_created_ts=run_created_ts
-        ):
-            logger.info(f"{hosting_service} has hit end, but unanswered blocks. not finishing this run yet.")
-            return False
-
-        logger.info(f"{hosting_service} - run completed - last processed block: {block}")
-        return True
-
-    @classmethod
-    def delete_dead_blocks(cls, hosting_service):
-        """
-        remove dead blocks from state manager
-        """
-        dead_blocks = state_manager.delete_dead_blocks(hoster_prefix=hosting_service.id)
-        return dead_blocks
+            active_blocks = cls.get_active_blocks(hosting_service=hosting_service, run_created_ts=run_created_ts)
+            if len(active_blocks) > 0:
+                logger.info(
+                    f"{hosting_service} - run will finish once all remaining open blocks are finished: {active_blocks}")
+                return False
+    
+            logger.info(f"{hosting_service} - run completed - last processed block: {block}")
+            return True
 
     @classmethod
-    def has_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> bool:
+    def get_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> List[Block]:
         """
         True if we have blocks open for this hoster
         """
+        active_blocks = []
         for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
             if block.run_created_ts == run_created_ts:
-                # there are still active blocks open in this run, so we don't finish
-                return True
-        return False
+                active_blocks.append(block)
+        return active_blocks
 
     @classmethod
     def has_too_many_consecutive_empty_results(cls, hosting_service: HostingService) -> bool:
