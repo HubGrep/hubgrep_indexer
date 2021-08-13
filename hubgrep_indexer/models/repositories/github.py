@@ -100,8 +100,8 @@ class GithubRepository(Repository):
         repo.hosting_service_id = hosting_service_id
         repo.github_id = github_id
         repo.name = cls.clean_string(name)
-        repo.homepage_url = d["homepageUrl"]
-        repo.url = d["url"]
+        repo.homepage_url = cls.clean_string(d["homepageUrl"])
+        repo.url = cls.clean_string(d["url"])
         repo.created_at = iso8601.parse_date(d["createdAt"])
         repo.updated_at = iso8601.parse_date(d["updatedAt"])
         if d.get("pushedAt", None):
