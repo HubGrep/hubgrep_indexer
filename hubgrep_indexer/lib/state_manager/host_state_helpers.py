@@ -40,6 +40,7 @@ class IStateHelper:
         run_created_ts = state_manager.get_run_created_ts(hoster_prefix=hosting_service.id)
         block = state_manager.get_block(hoster_prefix=hosting_service.id, block_uid=block_uid)
 
+        # 1 - first part of "run state" is to guard against touching state for old/invalid blocks
         if not block:
             # Block has already been deleted from the previous run, no state changes
             logger.warning(f"{hosting_service} - block no longer exists - no run state changes, uid: {block_uid}")
@@ -49,6 +50,7 @@ class IStateHelper:
             state_manager.finish_block(hoster_prefix=hosting_service.id, block_uid=block.uid)
             return None
 
+        # 2 - now we start making updates depending on what the results (repos/block) tells us
         state_manager.finish_block(
             hoster_prefix=hosting_service.id, block_uid=block_uid
         )
@@ -82,6 +84,7 @@ class IStateHelper:
                 repo_id = block.to_id
             state_manager.set_highest_confirmed_block_repo_id(hoster_prefix=hosting_service.id, repo_id=repo_id)
 
+        # 3 - indicate if a run is over, or still needs work
         has_run_hit_end = state_manager.get_has_run_hit_end(hoster_prefix=hosting_service.id)
         if not has_run_hit_end:
             return False
@@ -97,15 +100,13 @@ class IStateHelper:
                 logger.info(
                     f"{hosting_service} - run will finish once all remaining open blocks are finished: {active_blocks}")
                 return False
-    
+
             logger.info(f"{hosting_service} - run completed - last processed block: {block}")
             return True
 
     @classmethod
     def get_active_blocks(cls, hosting_service: HostingService, run_created_ts: float) -> List[Block]:
-        """
-        True if we have blocks open for this hoster
-        """
+        """ Retrieve all blocks still active in the current run. """
         active_blocks = []
         for block in state_manager.get_blocks_list(hoster_prefix=hosting_service.id):
             if block.run_created_ts == run_created_ts:
