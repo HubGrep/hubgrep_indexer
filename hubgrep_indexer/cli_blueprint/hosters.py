@@ -103,10 +103,12 @@ def list_api_keys():
             machine_id = state_manager.get_machine_id_by_api_key(
                 hosting_service_id=hosting_service.id, api_key=api_key
             )
-            print(f"\t{api_key} - used by {machine_id}")
+            print(f"\t'{api_key}' - used by {machine_id}")
 
 
 @cli_bp.cli.command(help="add api key")
+@click.argument("api_url")
+@click.argument("api_key")
 def add_api_key(api_url, api_key):
     hosting_service = HostingService.query.filter_by(api_url=api_url).first()
     if not hosting_service:
@@ -124,6 +126,8 @@ def add_api_key(api_url, api_key):
 
 
 @cli_bp.cli.command(help="delete an api key")
+@click.argument("api_url")
+@click.argument("api_key")
 def delete_api_key(api_url, api_key):
     hosting_service = HostingService.query.filter_by(api_url=api_url).first()
     if not hosting_service:
