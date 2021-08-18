@@ -78,6 +78,7 @@ class GiteaRepository(Repository):
         false as is_archived,
         false as is_disabled,
         mirror as is_mirror,
+        empty as is_empty,
         website as homepage_url,
         html_url as repo_url
     from

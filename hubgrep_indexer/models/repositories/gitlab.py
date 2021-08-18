@@ -105,6 +105,7 @@ class GitlabRepository(Repository):
         false as is_archived,
         false as is_disabled,
         false as is_mirror,
+        false as is_empty,
         web_url as homepage_url,
         http_url_to_repo as repo_url
     from
