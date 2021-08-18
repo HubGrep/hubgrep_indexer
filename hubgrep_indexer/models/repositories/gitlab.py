@@ -103,7 +103,6 @@ class GitlabRepository(Repository):
         false as is_private,
         false as is_fork,
         false as is_archived,
-        false as is_disabled,
         false as is_mirror,
         false as is_empty,
         web_url as homepage_url,
