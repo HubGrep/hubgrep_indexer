@@ -67,9 +67,8 @@ class GithubRepository(Repository):
         is_private as is_private,
         is_fork as is_fork,
         is_archived as is_archived,
-        is_disabled as is_disabled,
-        is_empty as is_empty,
         false as is_mirror,
+        is_empty as is_empty,
         homepage_url as homepage_url,
         url as repo_url
     from
