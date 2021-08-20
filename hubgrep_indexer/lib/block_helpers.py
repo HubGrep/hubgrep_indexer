@@ -4,6 +4,7 @@ helpers to generate block dicts for the crawlers
 
 import logging
 import time
+import random
 from typing import Dict, Union
 from flask import request
 from flask import current_app
@@ -58,6 +59,23 @@ def get_block_for_crawler(hosting_service_id) -> Union[Dict, None]:
     return None
 
 
+def _get_crawlable_hoster_states(hosting_service_type: str):
+    hoster_id_state = {}
+    for hosting_service in HostingService.query.filter_by(type=hosting_service_type).all():
+        hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
+            hoster_prefix=hosting_service.id
+        )
+
+    # remove everything finished recently
+    crawlable_hosters = {}
+    for hoster_id, state in hoster_id_state.items():
+        # logger.debug(f"checking hoster {hoster_id}")
+        if _state_is_too_old(state):
+            # logger.debug(f"hoster {hoster_id} would be crawlable...")
+            crawlable_hosters[hoster_id] = state
+    return crawlable_hosters
+
+
 def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict, None]:
     """
     get a block from a hoster of type <type>.
@@ -73,19 +91,7 @@ def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict,
     and then it will complete a whole hoster, then the next one...
     """
     # get all states
-    hoster_id_state = {}
-    for hosting_service in HostingService.query.filter_by(type=hosting_service_type).all():
-        hoster_id_state[hosting_service.id] = state_manager.get_state_dict(
-            hoster_prefix=hosting_service.id
-        )
-
-    # remove everything finished recently
-    crawlable_hosters = {}
-    for hoster_id, state in hoster_id_state.items():
-        # logger.debug(f"checking hoster {hoster_id}")
-        if _state_is_too_old(state):
-            # logger.debug(f"hoster {hoster_id} would be crawlable...")
-            crawlable_hosters[hoster_id] = state
+    crawlable_hosters = _get_crawlable_hoster_states(hosting_service_type)
 
     if not crawlable_hosters:
         # everything up to date, nothing to do
@@ -94,15 +100,18 @@ def get_loadbalanced_block_for_crawler(hosting_service_type: str) -> Union[Dict,
 
     logger.debug(f"crawlable hosters: {crawlable_hosters.keys()}")
     # get the oldest one in crawlable_hosters
-    oldest_hoster_id, oldest_hoster_state = min(
-        crawlable_hosters.items(),
-        key=lambda d: d[1].get(
-            "run_created_ts",
-        ),
-    )
-    logger.debug(f"creating block for hoster {oldest_hoster_id}:")
-    logger.debug(f"state {oldest_hoster_state}:")
-    return _get_block_dict(oldest_hoster_id)
+    #oldest_hoster_id, oldest_hoster_state = min(
+    #    crawlable_hosters.items(),
+    #    key=lambda d: d[1].get(
+    #        "run_created_ts",
+    #    ),
+    #)
+
+    hoster_id = random.choice(crawlable_hosters.keys())
+
+    logger.debug(f"creating block for hoster {hoster_id}:")
+    logger.debug(f"state {crawlable_hosters[hoster_id]}:")
+    return _get_block_dict(hoster_id)
 
 
 def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
@@ -138,3 +147,4 @@ def resolve_api_key(hosting_service: HostingService) -> Union[str, None]:
     logger.debug(
         f"crawler_id: {crawler_id} - resolved {hosting_service} api_key: {key_to_log} for machine_id: {machine_id}")
     return api_key
+
