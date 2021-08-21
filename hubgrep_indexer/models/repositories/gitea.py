@@ -62,31 +62,23 @@ class GiteaRepository(Repository):
     updated_at = db.Column(db.DateTime)  # "updatedAt": "2014-03-09T16:57:19Z",
     pushed_at = db.Column(db.DateTime)  # "pushedAt": "2014-03-09T16:57:19Z",
 
-    unified_select_statement_template = """
-    select
-        gitea_id as foreign_id,
-        name as name,
-        owner_username as username,
-        description as description,
-        created_at as created_at,
-        updated_at as updated_at,
-        pushed_at as pushed_at,
-        stars_count as stars_count,
-        forks_count as forks_count,
-        private as is_private,
-        fork as is_fork,
-        false as is_archived,
-        mirror as is_mirror,
-        empty as is_empty,
-        website as homepage_url,
-        html_url as repo_url
-    from
-        {TABLE_NAME}
-    where
-        hosting_service_id = {HOSTING_SERVICE_ID}
-    and
-        is_completed = true
-    """
+    unification_mapping = dict(
+        foreign_id="gitea_id",
+        name="name",
+        username="username",
+        description="description",
+        created_at="created_at",
+        updated_at="updated_at",
+        pushed_at="pushed_at",
+        stars_count="stars_count",
+        forks_count="forks_count",
+        is_fork="fork",
+        is_archived="archived",
+        is_mirror="mirror",
+        empty="is_empty",
+        homepage_url="website",
+        repo_url="html_url",
+    )
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True):
