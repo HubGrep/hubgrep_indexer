@@ -86,7 +86,6 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     )
 
     if is_run_finished:
-        #executor.submit(handle_finished_run, hosting_service)
-        handle_finished_run(hosting_service)
+        executor.submit(handle_finished_run, hosting_service)
 
     return jsonify(dict(status="ok")), 200
