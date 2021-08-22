@@ -43,7 +43,9 @@ class Repository(db.Model):
     def get_finished_table_name(cls, hosting_service: 'HostingService'):
         return f"hoster_{hosting_service.id}_repositories_complete"
 
-    unified_select_mapping = """
+    # order is important here!
+    # should be the same as in hubgrep_search/hubgrep/cli_blueprint/import_data.py
+    unified_select_template = """
         {foreign_id} as foreign_id,
         {name} as name,
         {username} as username,
@@ -61,10 +63,36 @@ class Repository(db.Model):
         {repo_url} as repo_url
         """
 
+    @property
+    def unification_mapping(self):
+        """
+        has to be defined for all subclasses
+
+        cls.unification_mapping has to be defined for all subclasses
+        and reflects the mapping from the specific repo fields to its unified version.
+
+        all variables used in `unified_select_mapping` have to be defined.
+
+        eg:
+        ```unification_mapping = dict(
+                foreign_id="my_hosters_id_field",
+                name='my_hosters_repo_name',
+                ...
+                )
+        ```
+        """
+        raise NotImplementedError
+
     @classmethod
-    def get_unified_select_sql(cls, hosting_service):
+    def get_unified_select_sql(cls, hosting_service: "HostingService") -> str:
+        """
+        get the sql statement for a "unified" export for this hostingservices repos.
+
+        fills out the select field part from `unified_select_mapping` for the specfic repo,
+        and wraps it in the select statement
+        """
         # cls.unified_select_mapping is a dict, defined for each subclass
-        rendered_select = cls.unified_select_mapping.format_map(cls.unification_mapping)
+        unified_select_part = cls.unified_select_template.format_map(cls.unification_mapping)
         unified_select_template = """
         select
             {SELECT_MAPPING}
@@ -72,7 +100,7 @@ class Repository(db.Model):
             {TABLE_NAME}
         """
         select_statement = unified_select_template.format(
-            SELECT_MAPPING=rendered_select,
+            SELECT_MAPPING=unified_select_part,
             TABLE_NAME=cls.get_finished_table_name(hosting_service),
         )
         return select_statement
@@ -96,12 +124,17 @@ class Repository(db.Model):
 
     @classmethod
     def rotate(cls, hosting_service: "HostingService") -> None:
-        """ """
+        """
+        drop and recreate the table for the hoster repos of this run
+
+        use at the end of a hoster run to put the newest version of the hosters repos
+        in its separate table before making exports
+        """
         logger.debug(f"rotating repos for {hosting_service}")
         repo_class = cls.repo_class_for_type(hosting_service.type)
 
         with TableHelper._cursor() as cur:
-            TableHelper.recreate_finished_table(cur, hosting_service)
+            TableHelper.recreate_finished_hoster_repo_table(cur, hosting_service)
 
             # clean up our working table
             cur.execute(
@@ -159,7 +192,10 @@ class Repository(db.Model):
         cls._copy_to_csv(select_statement, filename)
 
     @classmethod
-    def count_export_rows(cls, hosting_service):
+    def count_export_rows(cls, hosting_service: "HostingService") -> int:
+        """
+        count the rows of the finished repository table for this hosting_service
+        """
         finished_table_name = cls.get_finished_table_name(hosting_service)
         with TableHelper._cursor() as cur:
             return TableHelper.count_table_rows(cur, finished_table_name)

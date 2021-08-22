@@ -12,6 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class TestRepository:
+    def _commit_mock_repos(self, hosting_service):
+        mock_repos = get_mock_repos(hosting_service_type=hosting_service.type)
+        repo_class = Repository.repo_class_for_type(hosting_service.type)
+        repo = repo_class.from_dict(hosting_service.id, mock_repos[0])
+        db.session.add(repo)
+        db.session.commit()
+
+        # its just a helper function, but why not test here as well
+        assert repo_class.query.count() == 1
+        assert repo.name == mock_repos[0]["name"]
+
     @pytest.mark.parametrize(
         "hosting_service",  # matched against hosting_service fixture in conftest.py
         [HOST_TYPE_GITEA, HOST_TYPE_GITHUB, HOST_TYPE_GITLAB],
@@ -51,16 +62,13 @@ class TestRepository:
         indirect=True,
     )
     def test_rotate(self, test_app, test_client, hosting_service):
-        mock_repos = get_mock_repos(hosting_service_type=hosting_service.type)
         repo_class = Repository.repo_class_for_type(hosting_service.type)
 
         finished_tablename = repo_class.get_finished_table_name(
             hosting_service
         )
 
-        repo = repo_class.from_dict(hosting_service.id, mock_repos[0])
-        db.session.add(repo)
-        db.session.commit()
+        self._commit_mock_repos(hosting_service)
         # we added a repo
         assert repo_class.query.count() == 1
 
@@ -72,11 +80,7 @@ class TestRepository:
             assert TableHelper.count_table_rows(cur, finished_tablename) == 1
 
         # a second run
-
-        mock_repos = get_mock_repos(hosting_service_type=hosting_service.type)
-        repo = repo_class.from_dict(hosting_service.id, mock_repos[0])
-        db.session.add(repo)
-        db.session.commit()
+        self._commit_mock_repos(hosting_service)
 
         assert repo_class.query.count() == 1
         # rotate deletes the last run, leaving only the newest repo

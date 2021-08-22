@@ -35,14 +35,14 @@ class TableHelper:
             con.close()
 
     @classmethod
-    def drop_table(cls, cur, table_name):
+    def drop_table(cls, cur, table_name) -> None:
         """
         drop table (if exists)
         """
         cur.execute(f"drop table if exists {table_name}")
 
     @classmethod
-    def recreate_finished_table(cls, cur, hosting_service: 'HostingService'):
+    def recreate_finished_hoster_repo_table(cls, cur, hosting_service: 'HostingService') -> None:
         """
         drop and recreate the finished table for a hosting service
         """
@@ -64,7 +64,7 @@ class TableHelper:
         )
 
     @classmethod
-    def count_table_rows(cls, cur, table_name):
+    def count_table_rows(cls, cur, table_name: str) -> int:
         """
         count table rows
         """
