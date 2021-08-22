@@ -53,31 +53,23 @@ class GithubRepository(Repository):
         db.String(200)
     )  # "licenseInfo": {"name": "GNU General Public License v2.0", "nickname": "GNU GPLv2" }}
 
-    unified_select_statement_template = """
-    select
-        github_id as foreign_id,
-        name as name,
-        owner_login as username,
-        description as description,
-        created_at as created_at,
-        updated_at as updated_at,
-        pushed_at as pushed_at,
-        stargazer_count as stars_count,
-        fork_count as forks_count,
-        is_private as is_private,
-        is_fork as is_fork,
-        is_archived as is_archived,
-        false as is_mirror,
-        is_empty as is_empty,
-        homepage_url as homepage_url,
-        url as repo_url
-    from
-        {TABLE_NAME}
-    where
-        hosting_service_id = {HOSTING_SERVICE_ID}
-    and
-        is_completed = true
-    """
+    unification_mapping = dict(
+        foreign_id="github_id",
+        name="name",
+        username="owner_login",
+        description="description",
+        created_at="created_at",
+        updated_at="updated_at",
+        pushed_at="pushed_at",
+        stars_count="stargazer_count",
+        forks_count="fork_count",
+        is_fork="is_fork",
+        is_archived="is_archived",
+        is_mirror="false",
+        is_empty="is_empty",
+        homepage_url="homepage_url",
+        repo_url="url",
+    )
 
     @classmethod
     def github_id_from_base64(cls, gql_id: str) -> int:

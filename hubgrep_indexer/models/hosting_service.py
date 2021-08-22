@@ -79,7 +79,6 @@ class HostingService(db.Model):
             )
         return exports
 
-      
     def get_crawler_request_headers(self):
         """
         Get crawler request headers for this service.
@@ -128,17 +127,15 @@ class HostingService(db.Model):
     def export_repos(self):
         before = time.time()
         # make temp table
-        repo_class = Repository.repo_class_for_type(self.type)
-        with repo_class.make_tmp_table(self) as tmp_table:
-            logger.info(f"{self}: exporting raw!")
-            export = ExportMeta.create_export(self, tmp_table, unified=False)
-            db.session.add(export)
-            db.session.commit()
+        logger.info(f"{self}: exporting raw!")
+        export = ExportMeta.create_export(self, unified=False)
+        db.session.add(export)
+        db.session.commit()
 
-            logger.info(f"{self}: exporting unified!")
-            export = ExportMeta.create_export(self, tmp_table, unified=True)
-            db.session.add(export)
-            db.session.commit()
+        logger.info(f"{self}: exporting unified!")
+        export = ExportMeta.create_export(self, unified=True)
+        db.session.add(export)
+        db.session.commit()
 
         logger.debug(f"exported repos for {self} - took {time.time() - before}s")
 
@@ -152,6 +149,19 @@ class HostingService(db.Model):
 
         return hosting_service
 
+    def handle_finished_run(self):
+        """
+        after finishing a run, rotate and export
+
+        should be called via hubgrep_indexer.executor.submit(hosting_service.handle_finished_run)
+        """
+        repo_class = Repository.repo_class_for_type(self.type)
+        ts_rotate_start = time.time()
+        logger.info(f"{self} run is finished, rotating repos! :confetti:")
+        repo_class.rotate(self)
+        logger.debug(f"rotated repos for {self} - took {ts_rotate_start - time.time()}s")
+        self.export_repos()
+
     @property
     def repos(self) -> ResultProxy:
         """
@@ -162,12 +172,3 @@ class HostingService(db.Model):
         repo_class = Repository.repo_class_for_type(self.type)
         return repo_class.query.filter_by(hosting_service=self)
 
-    def count_repos(self) -> int:
-        repo_class = Repository.repo_class_for_type(self.type)
-        # fast counting: https://gist.github.com/hest/8798884
-        return db.session.execute(
-            db.session.query(repo_class)
-            .filter_by(hosting_service_id=self.id, is_completed=True)
-            .statement.with_only_columns([func.count()])
-            .order_by(None)
-        ).scalar()

@@ -89,31 +89,24 @@ class GitlabRepository(Repository):
                   'avatar_url': 'https://secure.gravatar.com/avatar/ec3a8f5183465a232283493f3de0a80d?s=80&d=identicon',
                   'web_url': 'https://gitlab.com/dedekindbr'}
     """
-    unified_select_statement_template = """
-    select
-        gitlab_id as foreign_id,
-        name as name,
-        user_name as username,
-        description as description,
-        created_at as created_at,
-        last_activity_at as updated_at,
-        last_activity_at as pushed_at,
-        star_count as stars_count,
-        forks_count as forks_count,
-        false as is_private,
-        false as is_fork,
-        false as is_archived,
-        false as is_mirror,
-        false as is_empty,
-        web_url as homepage_url,
-        http_url_to_repo as repo_url
-    from
-        {TABLE_NAME}
-    where
-        hosting_service_id = {HOSTING_SERVICE_ID}
-    and
-        is_completed = true
-    """
+
+    unification_mapping = dict(
+        foreign_id="gitlab_id",
+        name="name",
+        username="user_name",
+        description="description",
+        created_at="created_at",
+        updated_at="last_activity_at",
+        pushed_at="last_activity_at",
+        stars_count="star_count",
+        forks_count="forks_count",
+        is_fork="false",
+        is_archived="false",
+        is_mirror="false",
+        is_empty="false",
+        homepage_url="web_url",
+        repo_url="http_url_to_repo"
+    )
 
     @classmethod
     def from_dict(cls, hosting_service_id, d: dict, update=True) -> "GitlabRepository":
