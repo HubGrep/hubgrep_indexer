@@ -149,6 +149,19 @@ class HostingService(db.Model):
 
         return hosting_service
 
+    def handle_finished_run(self):
+        """
+        after finishing a run, rotate and export
+
+        should be called via hubgrep_indexer.executor.submit(hosting_service.handle_finished_run)
+        """
+        repo_class = Repository.repo_class_for_type(self.type)
+        ts_rotate_start = time.time()
+        logger.info(f"{self} run is finished, rotating repos! :confetti:")
+        repo_class.rotate(self)
+        logger.debug(f"rotated repos for {self} - took {ts_rotate_start - time.time()}s")
+        self.export_repos()
+
     @property
     def repos(self) -> ResultProxy:
         """

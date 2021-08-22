@@ -35,15 +35,6 @@ def _append_repos(hosting_service: HostingService, repo_dicts: List[dict]):
     return parsed_repos
 
 
-def handle_finished_run(hosting_service: HostingService):
-    repo_class = Repository.repo_class_for_type(hosting_service.type)
-    ts_rotate_start = time.time()
-    logger.info(f"{hosting_service} run is finished, rotating repos! :confetti:")
-    repo_class.rotate(hosting_service)
-    logger.debug(f"rotated repos for {hosting_service} - took {ts_rotate_start - time.time()}s")
-    hosting_service.export_repos()
-
-
 @api.route("/hosters/<hosting_service_id>/", methods=["PUT"])
 @api.route("/hosters/<hosting_service_id>/<block_uid>", methods=["PUT"])
 @login_required
@@ -56,7 +47,7 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     """
     hosting_service: HostingService = HostingService.query.get(hosting_service_id)
     repo_dicts = request.json
-    
+
     repo_class = Repository.repo_class_for_type(hosting_service.type)
     if not repo_class:
         return jsonify(status="error", msg="unknown repo type"), 403
@@ -86,6 +77,6 @@ def add_repos(hosting_service_id: int, block_uid: int = None):
     )
 
     if is_run_finished:
-        executor.submit(handle_finished_run, hosting_service)
+        executor.submit(hosting_service.handle_finished_run)
 
     return jsonify(dict(status="ok")), 200
