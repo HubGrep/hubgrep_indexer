@@ -93,7 +93,7 @@ class GitlabRepository(Repository):
     unification_mapping = dict(
         foreign_id="gitlab_id",
         name="name",
-        username="username",
+        username="user_name",
         description="description",
         created_at="created_at",
         updated_at="last_activity_at",
@@ -103,7 +103,7 @@ class GitlabRepository(Repository):
         is_fork="false",
         is_archived="false",
         is_mirror="false",
-        empty="false",
+        is_empty="false",
         homepage_url="web_url",
         repo_url="http_url_to_repo"
     )

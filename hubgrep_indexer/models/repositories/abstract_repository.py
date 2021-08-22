@@ -53,7 +53,6 @@ class Repository(db.Model):
         {pushed_at} as pushed_at,
         {stars_count} as stars_count,
         {forks_count} as forks_count,
-        {is_private} as is_private,
         {is_fork} as is_fork,
         {is_archived} as is_archived,
         {is_mirror} as is_mirror,
@@ -156,9 +155,14 @@ class Repository(db.Model):
         hosting_service: "HostingService",
         filename: str,
     ) -> None:
-        finished_table_name = cls.get_finished_table_name(hosting_service)
-        select_statement = cls.get_unified_select_sql(finished_table_name, hosting_service)
+        select_statement = cls.get_unified_select_sql(hosting_service)
         cls._copy_to_csv(select_statement, filename)
+
+    @classmethod
+    def count_export_rows(cls, hosting_service):
+        finished_table_name = cls.get_finished_table_name(hosting_service)
+        with TableHelper._cursor() as cur:
+            return TableHelper.count_table_rows(cur, finished_table_name)
 
     def to_dict(self):
         raise NotImplementedError

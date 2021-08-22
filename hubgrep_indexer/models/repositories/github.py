@@ -66,7 +66,7 @@ class GithubRepository(Repository):
         is_fork="is_fork",
         is_archived="is_archived",
         is_mirror="false",
-        empty="is_empty",
+        is_empty="is_empty",
         homepage_url="homepage_url",
         repo_url="url",
     )

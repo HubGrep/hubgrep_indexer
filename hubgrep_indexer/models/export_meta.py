@@ -66,7 +66,6 @@ class ExportMeta(db.Model):
     def create_export(
         cls,
         hosting_service: "HostingService",
-        table_name,
         unified=False,
         export_filename=None,
     ) -> str:
@@ -83,14 +82,15 @@ class ExportMeta(db.Model):
 
         logger.debug(f"exporting repos for {hosting_service}...")
         repo_class: Repository = Repository.repo_class_for_type(hosting_service.type)
+        repo_count = repo_class.count_export_rows(hosting_service)
+
         before = time.time()
         if not unified:
-            repo_class.export_csv_gz(table_name, hosting_service, export_filename)
+            repo_class.export_csv_gz(hosting_service, export_filename)
         else:
             repo_class.export_unified_csv_gz(
-                table_name, hosting_service, export_filename
+                hosting_service, export_filename
             )
-        repo_count = hosting_service.count_repos()
         logger.info(f"exporting {repo_count} repos took {time.time() - before}s")
 
         export = cls()
@@ -100,3 +100,4 @@ class ExportMeta(db.Model):
         export.repo_count = repo_count
         export.is_raw = not unified
         return export
+

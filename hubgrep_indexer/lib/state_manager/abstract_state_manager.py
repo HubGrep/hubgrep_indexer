@@ -12,7 +12,7 @@ class AbstractStateManager:
     Base class for state managers.
     """
 
-    def __init__(self, batch_size=1000, block_timeout=100):
+    def __init__(self, batch_size=1000, block_timeout=60):
         self.batch_size = batch_size  # block size for a crawler
         self.block_timeout = block_timeout  # seconds
 
@@ -166,7 +166,7 @@ class AbstractStateManager:
 
         for block in self.get_blocks_list(hoster_prefix):
             age = timestamp_now - block.attempts_at[-1]
-            if not block.is_dead() and age > self.block_timeout:
+            if age > self.block_timeout:
                 block.attempts_at.append(timestamp_now)
                 self.update_block(hoster_prefix=hoster_prefix, block=block)
                 return block

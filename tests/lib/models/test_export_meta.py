@@ -27,21 +27,23 @@ class TestExportMeta:
         [HOST_TYPE_GITEA],
         indirect=True,
     )
-    def test_create_export(self, hosting_service):
-        repo_class: Repository = Repository.repo_class_for_type(hosting_service.type)
+    def test_create_export(self, test_app, hosting_service):
 
-        # mock functions that access the db
-        # should be called, we make a raw export
-        repo_class.export_csv_gz = mock.MagicMock()
-        # should not be called
-        repo_class.export_unified_csv_gz = mock.MagicMock()
-        # counts the db rows..
-        hosting_service.count_repos = mock.MagicMock(return_value=1)
-        export = ExportMeta.create_export(
-            hosting_service, "some_table", unified=False, export_filename="export"
-        )
+        with test_app.app_context():
+            repo_class: Repository = Repository.repo_class_for_type(hosting_service.type)
 
-        repo_class.export_csv_gz.assert_called()
-        assert export.file_path == "export"
-        assert export.repo_count == 1
-        assert export.is_raw is True
+            # mock functions that access the db
+            # should be called, we make a raw export
+            repo_class.export_csv_gz = mock.MagicMock()
+            # should not be called
+            repo_class.export_unified_csv_gz = mock.MagicMock()
+            # counts the db rows..
+            repo_class.count_export_rows = mock.MagicMock(return_value=1)
+            export = ExportMeta.create_export(
+                hosting_service, unified=False, export_filename="export"
+            )
+
+            repo_class.export_csv_gz.assert_called()
+            assert export.file_path == "export"
+            assert export.repo_count == 1
+            assert export.is_raw is True

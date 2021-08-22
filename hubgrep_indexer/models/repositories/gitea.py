@@ -65,7 +65,7 @@ class GiteaRepository(Repository):
     unification_mapping = dict(
         foreign_id="gitea_id",
         name="name",
-        username="username",
+        username="owner_username",
         description="description",
         created_at="created_at",
         updated_at="updated_at",
@@ -73,9 +73,9 @@ class GiteaRepository(Repository):
         stars_count="stars_count",
         forks_count="forks_count",
         is_fork="fork",
-        is_archived="archived",
+        is_archived="false",
         is_mirror="mirror",
-        empty="is_empty",
+        is_empty="empty",
         homepage_url="website",
         repo_url="html_url",
     )

@@ -62,3 +62,12 @@ class TableHelper:
                 """,
             (hosting_service.id,),
         )
+
+    @classmethod
+    def count_table_rows(cls, cur, table_name):
+        """
+        count table rows
+        """
+        cur.execute(f"select count(*) from {table_name}")
+        return cur.fetchone()[0]
+

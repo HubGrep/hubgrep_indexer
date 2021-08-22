@@ -22,26 +22,3 @@ class TestGiteaRepository:
             assert repo.name == mock_repos[0]["name"]
 
 
-    # cannot test this on sqlite, since the copy function is a psycopg thing :(
-    """
-    def test_export_to_file(self, test_app, test_client, hosting_service):
-        import tempfile
-        import os
-        import shutil
-        import pathlib
-
-        with test_app.app_context():
-            repo = GiteaRepository.from_dict(hosting_service.id, gitea_results[0])
-            db.session.add(repo)
-            db.session.commit()
-            filename = "testfile"
-            with tempfile.TemporaryDirectory() as tempdir:
-                GiteaRepository.export_csv_gz(
-                    hosting_service.id,
-                    hosting_service.type,
-                    filename,
-                    results_base_path=tempdir,
-                )
-                filepath = pathlib.Path(tempdir).joinpath(filename)
-                assert filepath.stat().st_size != 0
-    """
