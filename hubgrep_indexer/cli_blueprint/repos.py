@@ -10,8 +10,9 @@ logger = logging.getLogger(__name__)
 @cli_bp.cli.command()
 @click.argument("hosting_service")
 def export_repos(hosting_service):
+    hosting_service_api_url = hosting_service
     hosting_service: HostingService = HostingService.query.filter_by(
-        api_url=hosting_service
+        api_url=hosting_service_api_url
     ).first()
 
     hosting_service.export_repos()

@@ -19,3 +19,4 @@ class DotEnvConfig(Config):
     LOGLEVEL = os.environ.get("HUBGREP_INDEXER_LOGLEVEL", "debug")
 
     BLOCK_MAX_RETRIES = int(os.environ.get("HUBGREP_BLOCK_MAX_RETRIES", 3))
+    KEEP_LAST_RUN_IN_DB = bool(int(os.environ.get("HUBGREP_KEEP_LAST_RUN_IN_DB", 1)))

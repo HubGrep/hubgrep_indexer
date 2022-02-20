@@ -16,6 +16,7 @@ from flask import current_app
 from hubgrep_indexer import db
 from hubgrep_indexer.models.export_meta import ExportMeta
 from hubgrep_indexer.models.repositories.abstract_repository import Repository
+from hubgrep_indexer.lib.table_helper import TableHelper
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,14 @@ class HostingService(db.Model):
         repo_class.rotate(self)
         logger.debug(f"rotated repos for {self} - took {ts_rotate_start - time.time()}s")
         self.export_repos()
+        logger.debug(f"export for {self} finished")
+        if not current_app.config['KEEP_LAST_RUN_IN_DB']:
+            logger.debug(f"dropping table for exported {self}")
+
+            target_table = Repository.get_finished_table_name(self)
+            with TableHelper._cursor() as cur:
+                TableHelper.drop_table(cur, target_table)
+
 
     @property
     def repos(self) -> ResultProxy:

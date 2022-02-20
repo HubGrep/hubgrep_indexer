@@ -19,3 +19,4 @@ class TestingConfig(Config):
     LOGIN_DISABLED = True
 
     BLOCK_MAX_RETRIES = 3
+    KEEP_LAST_RUN_IN_DB = 1
