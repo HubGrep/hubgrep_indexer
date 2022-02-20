@@ -164,12 +164,14 @@ class HostingService(db.Model):
         self.export_repos()
         logger.debug(f"export for {self} finished")
         if not current_app.config['KEEP_LAST_RUN_IN_DB']:
-            logger.debug(f"dropping table for exported {self}")
+            self.drop_finished_run_table()
 
-            target_table = Repository.get_finished_table_name(self)
-            with TableHelper._cursor() as cur:
-                TableHelper.drop_table(cur, target_table)
+    def drop_finished_run_table(self):
+        logger.debug(f"dropping table for exported {self}")
 
+        target_table = Repository.get_finished_table_name(self)
+        with TableHelper._cursor() as cur:
+            TableHelper.drop_table(cur, target_table)
 
     @property
     def repos(self) -> ResultProxy:

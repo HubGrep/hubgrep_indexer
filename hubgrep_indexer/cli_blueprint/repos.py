@@ -58,3 +58,19 @@ def prune_exports(keep, hosting_service=None):
         for export in old_exports_unified:
             print(f"deleting export {export}")
             export.delete_file()
+
+
+@cli_bp.cli.command(help="drop a hosting services 'finished' table")
+@click.argument("hosting_service")
+def drop_finished_run_table(hosting_service):
+    hosting_service_api_url = hosting_service
+    hosting_service: HostingService = HostingService.query.filter_by(
+        api_url=hosting_service_api_url
+    ).first()
+    if not hosting_service:
+        print('could not find hosting service!')
+        exit(1)
+
+    print(f"found {hosting_service}, dropping finished table")
+    hosting_service.drop_finished_run_table()
+
